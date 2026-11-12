@@ -63,6 +63,51 @@ static bool transition_parse_shorthand(const char * value, char * buf, size_t bu
  *   GLOBAL FUNCTIONS
  **********************/
 
+lv_result_t lv_xml_register_style_external(lv_xml_component_scope_t * scope, const char * name,
+                                           lv_style_t * style)
+{
+    if(name == NULL || style == NULL) return LV_RESULT_INVALID;
+
+    if(scope == NULL) scope = lv_xml_component_get_scope("globals");
+    if(scope == NULL) return LV_RESULT_INVALID;
+
+    lv_xml_style_t * xml_style;
+    LV_LL_READ(&scope->style_ll, xml_style) {
+        if(lv_streq(xml_style->name, name)) {
+            if(xml_style->external == NULL) {
+                /* An XML-defined style of this name may already be applied to
+                 * live widgets, so its storage must stay; it just stops being
+                 * what new lookups get. */
+                LV_LOG_WARN("Style %s is defined in XML; the application style replaces it for new widgets", name);
+            }
+            xml_style->external = style;
+            return LV_RESULT_OK;
+        }
+    }
+
+    xml_style = lv_ll_ins_tail(&scope->style_ll);
+    if(xml_style == NULL) {
+        LV_LOG_ERROR("OOM: failed to register style '%s'", name);
+        return LV_RESULT_INVALID;
+    }
+    lv_memzero(xml_style, sizeof(*xml_style));
+    xml_style->name = lv_strdup(name);
+    lv_style_init(&xml_style->style); /*unused, but teardown resets it like any other*/
+    xml_style->external = style;
+    size_t long_name_len = lv_strlen(scope->name) + 1 + lv_strlen(name) + 1;
+    xml_style->long_name = lv_malloc(long_name_len);
+    if(xml_style->name == NULL || xml_style->long_name == NULL) {
+        lv_free((char *)xml_style->name);
+        lv_free((char *)xml_style->long_name);
+        lv_ll_remove(&scope->style_ll, xml_style);
+        lv_free(xml_style);
+        LV_LOG_ERROR("OOM: failed to register style '%s'", name);
+        return LV_RESULT_INVALID;
+    }
+    lv_snprintf((char *)xml_style->long_name, long_name_len, "%s.%s", scope->name, name);
+    return LV_RESULT_OK;
+}
+
 lv_result_t lv_xml_register_style(lv_xml_component_scope_t * scope, const char ** attrs)
 {
     const char * style_name =  lv_xml_get_value_of(attrs, "name");
@@ -97,6 +142,11 @@ lv_result_t lv_xml_register_style(lv_xml_component_scope_t * scope, const char *
         size_t long_name_len = lv_strlen(scope->name) + 1 + lv_strlen(style_name) + 1;
         xml_style->long_name = lv_malloc(long_name_len);
         lv_snprintf((char *)xml_style->long_name, long_name_len, "%s.%s", scope->name, style_name); /*E.g. my_button.style1*/
+    }
+
+    if(xml_style->external) {
+        LV_LOG_WARN("Style %s is registered by the application and can't be extended from XML", style_name);
+        return LV_RESULT_INVALID;
     }
 
     lv_style_t * style = &xml_style->style;

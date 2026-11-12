@@ -63,6 +63,8 @@ Features added here that upstream's engine does not have:
 | Inline element text | `<label>Hello</label>` sets `text` and synthesizes a translation tag |
 | `float` and `color` subjects | Upstream supports only `int` and `string` |
 | `<subject name= type= value=>` | Single-tag subject declarations (upstream's tag-per-type form also parses) |
+| Subject contexts | Per-*instance* subjects: `lv_xml_create_with_ctx()` builds a view with a chain of named subjects active, so every instance of one component (a list row, say) binds `bind_text="name"` to its own subject. Lookup order is component scope, then the context chain, then globals; subject-bound `<repeat>`/`<if>` keep the context for their rebuilds. See `src/xml/lv_xml_subject_ctx.h` |
+| External styles | `lv_xml_register_style_external()` makes an application-owned `lv_style_t` usable from `<style name=>` and `bind_style`. The pointer is borrowed, so an application theme that rewrites its styles in place restyles XML widgets too |
 | Authored inline colors | Every inline `style_*` color written as a global `#const` or a literal is recorded on its object; `lv_xml_obj_has_authored_style()` tells bulk recolor code to keep off, and `lv_xml_reapply_token_styles()` re-resolves the `#const` ones after `lv_xml_set_const()`, skipping colors other code has changed since; `lv_xml_reapply_style_tokens()` does the same for `#const` colors in named `<style>`s |
 
 Full reference for the reactive surface — subjects, every binding element, the

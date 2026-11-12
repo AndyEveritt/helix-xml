@@ -36,6 +36,11 @@ typedef struct _lv_xml_style_t {
     const char * name;
     const char * long_name;
     lv_style_t style;
+    /* Non-NULL for a style registered with lv_xml_register_style_external():
+     * the application owns this lv_style_t and the engine only hands out the
+     * pointer. `style` above stays empty. Always read the style to apply through
+     * lv_xml_style_get_lv_style(). */
+    lv_style_t * external;
     /* Engine-owned transition. LVGL stores only a pointer in the style, and
      * lv_style_reset() does not follow it, so the record owns both allocations.
      * trans_authored_time is the pre-scale duration: scaling reads it rather
@@ -57,6 +62,32 @@ typedef struct _lv_xml_style_t {
  * @param attrs     list of attribute names and values
  */
 lv_result_t lv_xml_register_style(lv_xml_component_scope_t * scope, const char ** attrs);
+
+/**
+ * Make an application-owned `lv_style_t` available to XML under `name`, so
+ * `styles="name"`, `<style name=...>` references and `bind_style` can use a
+ * style built in C. The engine borrows the pointer: it never initialises,
+ * resets or frees it, and changes the application makes to it (e.g. a theme
+ * switch followed by `lv_obj_report_style_change()`) reach every widget using
+ * it. The style must outlive every widget it is applied to.
+ * Registering a name that already exists replaces it for widgets created
+ * afterwards. An external style cannot be extended with XML properties.
+ * @param scope     scope to register in, or NULL for `globals`
+ * @param name      style name (copied)
+ * @param style     the application's style
+ * @return          `LV_RESULT_OK` on success
+ */
+lv_result_t lv_xml_register_style_external(lv_xml_component_scope_t * scope, const char * name,
+                                           lv_style_t * style);
+
+/**
+ * The `lv_style_t` an XML style record applies: the application's style for an
+ * external registration, otherwise the engine-owned one.
+ */
+static inline lv_style_t * lv_xml_style_get_lv_style(lv_xml_style_t * xs)
+{
+    return xs->external ? xs->external : &xs->style;
+}
 
 /**
  * Decompose a string like `"style1:pressed:checked:knob"` to style name and selector

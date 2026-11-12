@@ -309,11 +309,11 @@ void lv_obj_xml_style_apply(lv_xml_parser_state_t * state, const char ** attrs)
     size_t n_parts = lv_xml_parse_parts_attr(parts_str, selector & 0xFFFF, parts, 8);
     if(n_parts > 0) {
         for(size_t i = 0; i < n_parts; i++) {
-            lv_obj_add_style(item, &xml_style->style, parts[i]);
+            lv_obj_add_style(item, lv_xml_style_get_lv_style(xml_style), parts[i]);
         }
     }
     else {
-        lv_obj_add_style(item, &xml_style->style, selector);
+        lv_obj_add_style(item, lv_xml_style_get_lv_style(xml_style), selector);
     }
 }
 
@@ -337,7 +337,7 @@ void lv_obj_xml_remove_style_apply(lv_xml_parser_state_t * state, const char ** 
             LV_LOG_WARN("No style found with name `%s`", style_str);
             return;
         }
-        style = &xml_style->style;
+        style = lv_xml_style_get_lv_style(xml_style);
     }
 
     lv_style_selector_t selector = lv_xml_style_selector_text_to_enum(selector_str);
@@ -652,10 +652,10 @@ void lv_obj_xml_bind_style_apply(lv_xml_parser_state_t * state, const char ** at
     size_t n_parts = lv_xml_parse_parts_attr(parts_str, selector & 0xFFFF, parts, 8);
     if(n_parts > 0) {
         for(size_t i = 0; i < n_parts; i++) {
-            lv_obj_bind_style(item, &xml_style->style, parts[i], subject, ref_value);
+            lv_obj_bind_style(item, lv_xml_style_get_lv_style(xml_style), parts[i], subject, ref_value);
         }
     } else {
-        lv_obj_bind_style(item, &xml_style->style, selector, subject, ref_value);
+        lv_obj_bind_style(item, lv_xml_style_get_lv_style(xml_style), selector, subject, ref_value);
     }
 }
 
@@ -774,13 +774,13 @@ void lv_obj_xml_bind_style_cmp_apply(lv_xml_parser_state_t * state, const char *
         lv_style_selector_t sel = (n_parts > 0) ? parts[i] : selector;
 
         /* Add the style (starts enabled, observer will immediately set correct state) */
-        lv_obj_add_style(item, &xml_style->style, sel);
+        lv_obj_add_style(item, lv_xml_style_get_lv_style(xml_style), sel);
 
         bind_style_cmp_data_t * p = lv_malloc(sizeof(bind_style_cmp_data_t));
         LV_ASSERT_MALLOC(p);
         if(p == NULL) return;
 
-        p->style = &xml_style->style;
+        p->style = lv_xml_style_get_lv_style(xml_style);
         p->selector = sel;
         p->value = ref_value;
         p->cmp = cmp;
@@ -789,7 +789,7 @@ void lv_obj_xml_bind_style_cmp_apply(lv_xml_parser_state_t * state, const char *
          * nothing to toggle the style, so it is not left applied either. */
         lv_observer_t * obs = lv_subject_add_observer_obj(subject, bind_style_cmp_observer_cb, item, p);
         if(obs == NULL) {
-            lv_obj_remove_style(item, &xml_style->style, sel);
+            lv_obj_remove_style(item, lv_xml_style_get_lv_style(xml_style), sel);
             lv_free(p);
             continue;
         }
@@ -1285,14 +1285,14 @@ void lv_obj_xml_bind_style_if_apply(lv_xml_parser_state_t * state, const char **
         return;
     }
     c->obj = item;
-    c->style = &xml_style->style;
+    c->style = lv_xml_style_get_lv_style(xml_style);
 
     size_t count = (n_parts > 0) ? n_parts : 1;
     for(size_t i = 0; i < count; i++) {
         lv_style_selector_t sel = (n_parts > 0) ? parts[i] : selector;
         c->selectors[i] = sel;
         /* Add the style (starts enabled, observer will immediately set correct state) */
-        lv_obj_add_style(item, &xml_style->style, sel);
+        lv_obj_add_style(item, lv_xml_style_get_lv_style(xml_style), sel);
     }
     c->n_selectors = count;
 

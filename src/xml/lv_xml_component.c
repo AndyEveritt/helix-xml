@@ -897,7 +897,7 @@ static bool obj_holds_scope_style(lv_obj_t * obj, lv_xml_component_scope_t * sco
     for(uint32_t i = 0; i < obj->style_cnt; i++) {
         lv_xml_style_t * xs;
         LV_LL_READ(&scope->style_ll, xs) {
-            if(obj->styles[i].style == &xs->style) return true;
+            if(obj->styles[i].style == lv_xml_style_get_lv_style(xs)) return true;
         }
     }
     uint32_t n = lv_obj_get_child_count(obj);
