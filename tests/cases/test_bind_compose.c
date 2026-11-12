@@ -357,10 +357,55 @@ static void test_a_rebuilt_instance_composes_from_a_clean_slate(void)
     ASSERT_NO_STATE(box, LV_STATE_DISABLED);
 }
 
+/**
+ * A string subject compares as text: a navigation bar checks the button whose
+ * page name matches the open page, and hides a badge while the page is "home".
+ */
+static void test_string_subjects_compare_as_text(void)
+{
+    static char page_buf[16], page_prev[16];
+    static lv_subject_t page;
+    lv_subject_init_string(&page, page_buf, page_prev, sizeof(page_buf), "home");
+    lv_xml_register_subject(NULL, "page", &page);
+
+    ASSERT_XML_REGISTERS("bc_string_eq",
+                         "<component>"
+                         "  <view extends=\"lv_obj\" name=\"root\">"
+                         "    <lv_obj name=\"control\">"
+                         "      <bind_state_if_eq subject=\"page\" state=\"checked\" ref_value=\"control\"/>"
+                         "    </lv_obj>"
+                         "    <lv_obj name=\"badge\">"
+                         "      <bind_flag_if_not_eq subject=\"page\" flag=\"hidden\" ref_value=\"home\"/>"
+                         "    </lv_obj>"
+                         "    <lv_obj name=\"ignored\">"
+                         "      <bind_state_if_gt subject=\"page\" state=\"checked\" ref_value=\"control\"/>"
+                         "    </lv_obj>"
+                         "  </view>"
+                         "</component>");
+
+    lv_obj_t * root = XML_CREATE(helix_test_env_screen(), "bc_string_eq", NULL);
+    lv_obj_t * control = ASSERT_NAMED(root, "control");
+    lv_obj_t * badge = ASSERT_NAMED(root, "badge");
+    TEST_ASSERT_FALSE(lv_obj_has_state(control, LV_STATE_CHECKED));
+    TEST_ASSERT_FALSE(lv_obj_has_flag(badge, LV_OBJ_FLAG_HIDDEN));
+
+    lv_subject_copy_string(&page, "control");
+    TEST_ASSERT_TRUE(lv_obj_has_state(control, LV_STATE_CHECKED));
+    TEST_ASSERT_TRUE(lv_obj_has_flag(badge, LV_OBJ_FLAG_HIDDEN));
+
+    /* Ordering comparisons don't apply to text */
+    TEST_ASSERT_FALSE(lv_obj_has_state(ASSERT_NAMED(root, "ignored"), LV_STATE_CHECKED));
+
+    lv_obj_delete(root);
+    lv_xml_unregister_subject(NULL, "page");
+    lv_subject_deinit(&page);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
 
+    RUN_TEST(test_string_subjects_compare_as_text);
     RUN_TEST(test_two_state_eq_binds_disable_when_either_reason_holds);
     RUN_TEST(test_two_flag_eq_binds_hide_when_either_reason_holds);
     RUN_TEST(test_a_cond_bind_and_an_eq_bind_compose_on_one_state);

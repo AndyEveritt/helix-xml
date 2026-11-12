@@ -54,6 +54,10 @@ All of these are children of the widget they act on.
 | `bind_style_if_eq` … | a named style | ✅ | — |
 | `bind_style_if` | a named style | — | ✅ `cond=` |
 
+With a **string** subject, `_eq` and `_not_eq` compare `ref_value` as text, e.g.
+`<bind_state_if_eq subject="page" state="checked" ref_value="control"/>`; the
+ordering suffixes don't apply to strings and are ignored with a warning.
+
 The not-equal suffix is spelled **`_not_eq`**, not `_ne` — `_ne` is the *expression*
 operator (`a ne b`), and the two are not interchangeable. An element named
 `bind_flag_if_ne` does not exist and is silently not recognised.

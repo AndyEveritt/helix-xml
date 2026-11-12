@@ -108,7 +108,7 @@ typedef enum {
 } bitfield_cmp_t;
 
 static void bind_bitfield_cmp(lv_obj_t * obj, lv_subject_t * subject, lv_xml_bind_kind_t kind,
-                              uint32_t bits, int32_t ref_value, bitfield_cmp_t cmp, bool inv);
+                              uint32_t bits, const char * ref_value, bitfield_cmp_t cmp, bool inv);
 
 void lv_xml_obj_apply(lv_xml_parser_state_t * state, const char ** attrs)
 {
@@ -248,7 +248,7 @@ void lv_xml_obj_apply(lv_xml_parser_state_t * state, const char ** attrs)
             if(lv_xml_to_bool(value)) {
                 lv_subject_t * subject = lv_xml_get_subject(&state->scope, "machine_motion_blocked");
                 if(subject) {
-                    bind_bitfield_cmp(item, subject, LV_XML_BIND_STATE, LV_STATE_DISABLED, 1,
+                    bind_bitfield_cmp(item, subject, LV_XML_BIND_STATE, LV_STATE_DISABLED, "1",
                                       BITFIELD_CMP_EQ, false);
                 }
             }
@@ -838,6 +838,7 @@ void lv_obj_xml_bind_style_prop_apply(lv_xml_parser_state_t * state, const char 
 typedef struct {
     lv_xml_bind_target_t target;
     int32_t ref_value;
+    char * ref_string;  /*The reference for a string subject (only `eq`/`not_eq`), else NULL*/
     uint8_t cmp;
     bool inv;
 } bitfield_bind_ctx_t;
@@ -857,6 +858,14 @@ static bool bitfield_cmp_from_suffix(const char * suffix, bitfield_cmp_t * cmp, 
 static void bitfield_bind_observer_cb(lv_observer_t * observer, lv_subject_t * subject)
 {
     bitfield_bind_ctx_t * c = (bitfield_bind_ctx_t *)lv_observer_get_user_data(observer);
+
+    if(c->ref_string) {
+        bool res = lv_streq(lv_subject_get_string(subject), c->ref_string);
+        if(c->inv) res = !res;
+        lv_xml_bind_target_set(&c->target, res);
+        return;
+    }
+
     int32_t v = lv_subject_get_int(subject);
 
     bool res = false;
@@ -878,7 +887,9 @@ static void bitfield_bind_observer_cb(lv_observer_t * observer, lv_subject_t * s
 
 static void free_bitfield_bind_ctx_cb(lv_event_t * e)
 {
-    lv_free(lv_event_get_user_data(e));
+    bitfield_bind_ctx_t * c = lv_event_get_user_data(e);
+    lv_free(c->ref_string);
+    lv_free(c);
 }
 
 /**
@@ -892,9 +903,15 @@ static void free_bitfield_bind_ctx_cb(lv_event_t * e)
  * every binding on the bits, in any notify order.
  */
 static void bind_bitfield_cmp(lv_obj_t * obj, lv_subject_t * subject, lv_xml_bind_kind_t kind,
-                              uint32_t bits, int32_t ref_value, bitfield_cmp_t cmp, bool inv)
+                              uint32_t bits, const char * ref_value, bitfield_cmp_t cmp, bool inv)
 {
-    if(subject->type != LV_SUBJECT_TYPE_INT) {
+    /* A string subject compares as text, so only equality makes sense */
+    const bool is_string = subject->type == LV_SUBJECT_TYPE_STRING;
+    if(is_string && cmp != BITFIELD_CMP_EQ) {
+        LV_LOG_WARN("A string subject can only be compared with `_eq` or `_not_eq`");
+        return;
+    }
+    if(!is_string && subject->type != LV_SUBJECT_TYPE_INT) {
         LV_LOG_WARN("Incompatible subject type: %d", subject->type);
         return;
     }
@@ -903,7 +920,16 @@ static void bind_bitfield_cmp(lv_obj_t * obj, lv_subject_t * subject, lv_xml_bin
     LV_ASSERT_MALLOC(c);
     if(c == NULL) return;
 
-    c->ref_value = ref_value;
+    if(is_string) {
+        c->ref_string = lv_strdup(ref_value);
+        if(c->ref_string == NULL) {
+            lv_free(c);
+            return;
+        }
+    }
+    else {
+        c->ref_value = lv_xml_atoi(ref_value);
+    }
     c->cmp = (uint8_t)cmp;
     c->inv = inv;
 
@@ -964,9 +990,8 @@ void lv_obj_xml_bind_flag_apply(lv_xml_parser_state_t * state, const char ** att
         }
         else {
             lv_obj_flag_t flag = flag_to_enum(flag_str);
-            int32_t ref_value = lv_xml_atoi(ref_value_str);
             lv_obj_t * item = lv_xml_state_get_item(state);
-            bind_bitfield_cmp(item, subject, LV_XML_BIND_FLAG, flag, ref_value, cmp, inv);
+            bind_bitfield_cmp(item, subject, LV_XML_BIND_FLAG, flag, ref_value_str, cmp, inv);
         }
     }
 }
@@ -1112,9 +1137,8 @@ void lv_obj_xml_bind_state_apply(lv_xml_parser_state_t * state, const char ** at
         }
         else {
             lv_state_t s = lv_xml_state_to_enum(state_str);
-            int32_t ref_value = lv_xml_atoi(ref_value_str);
             lv_obj_t * item = lv_xml_state_get_item(state);
-            bind_bitfield_cmp(item, subject, LV_XML_BIND_STATE, s, ref_value, cmp, inv);
+            bind_bitfield_cmp(item, subject, LV_XML_BIND_STATE, s, ref_value_str, cmp, inv);
         }
     }
 }
