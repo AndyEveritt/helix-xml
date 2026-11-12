@@ -78,6 +78,12 @@ int32_t lv_xml_to_size(const char * txt)
     else return v;
 }
 
+int32_t lv_xml_to_radius(const char * txt)
+{
+    if(lv_streq(txt, "circle")) return LV_RADIUS_CIRCLE;
+    return lv_xml_to_size(txt);
+}
+
 lv_align_t lv_xml_align_to_enum(const char * txt)
 {
     if(lv_streq("top_left", txt)) return LV_ALIGN_TOP_LEFT;

@@ -41,6 +41,13 @@ lv_state_t lv_xml_state_to_enum(const char * txt);
  */
 int32_t lv_xml_to_size(const char * txt);
 
+/**
+ * Process a radius: a size (see lv_xml_to_size()) or `circle` for `LV_RADIUS_CIRCLE`
+ * @param txt       e.g. "5", "50%" or "circle"
+ * @return          the radius
+ */
+int32_t lv_xml_to_radius(const char * txt);
+
 
 /**
  * Convert an align string to enum

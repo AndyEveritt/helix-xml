@@ -149,6 +149,35 @@ lv_result_t lv_xml_register_style(lv_xml_component_scope_t * scope, const char *
         return LV_RESULT_INVALID;
     }
 
+    return lv_xml_style_set_props(xml_style, scope, attrs);
+}
+
+void lv_xml_style_init(lv_xml_style_t * xs, const char * name)
+{
+    lv_memzero(xs, sizeof(*xs));
+    xs->name = lv_strdup(name ? name : "");
+    xs->long_name = lv_strdup(name ? name : "");
+    lv_style_init(&xs->style);
+}
+
+void lv_xml_style_deinit(lv_xml_style_t * xs)
+{
+    if(xs == NULL) return;
+    lv_free((char *)xs->name);
+    lv_free((char *)xs->long_name);
+    lv_xml_style_transition_clear(xs);
+    lv_xml_style_tokens_clear(xs);
+    lv_style_reset(&xs->style);
+    lv_memzero(xs, sizeof(*xs));
+}
+
+lv_result_t lv_xml_style_set_props(lv_xml_style_t * xml_style, lv_xml_component_scope_t * scope,
+                                   const char ** attrs)
+{
+    if(xml_style == NULL || attrs == NULL) return LV_RESULT_INVALID;
+    if(scope == NULL) scope = lv_xml_component_get_scope("globals");
+
+    const char * style_name = xml_style->name ? xml_style->name : "";
     lv_style_t * style = &xml_style->style;
 
     /* The transition descriptor cannot be built until every attribute that
@@ -265,7 +294,7 @@ lv_result_t lv_xml_register_style(lv_xml_component_scope_t * scope, const char *
         else SET_STYLE_IF(min_height, lv_xml_to_size(value));
         else SET_STYLE_IF(max_height, lv_xml_to_size(value));
         else SET_STYLE_IF(length, lv_xml_to_size(value));
-        else SET_STYLE_IF(radius, lv_xml_to_size(value));
+        else SET_STYLE_IF(radius, lv_xml_to_radius(value));
         else SET_STYLE_IF(radial_offset, lv_xml_atoi(value));
         else SET_STYLE_IF(align, lv_xml_align_to_enum(value));
 

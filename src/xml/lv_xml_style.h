@@ -64,6 +64,37 @@ typedef struct _lv_xml_style_t {
 lv_result_t lv_xml_register_style(lv_xml_component_scope_t * scope, const char ** attrs);
 
 /**
+ * Set properties of a style record from style attributes, exactly as a
+ * `<style>` element does: `bg_color="0x123456"`, `#const` values,
+ * `transition="..."`, `remove`, and so on. Later calls add to (or overwrite)
+ * earlier ones. The record owns whatever the style points to (a transition
+ * descriptor), so keep it as long as its style is in use.
+ * Used by lv_xml_register_style(); also lets an application keep its own
+ * records outside any scope (see lv_xml_style_init()).
+ * @param xs        the record
+ * @param scope     where `#const`, font and image names are looked up; NULL for `globals`
+ * @param attrs     NULL-terminated name/value pairs; `name` is ignored
+ * @return          `LV_RESULT_OK` on success
+ */
+lv_result_t lv_xml_style_set_props(lv_xml_style_t * xs, lv_xml_component_scope_t * scope, const char ** attrs);
+
+/**
+ * Initialise a style record that belongs to the application rather than to a
+ * scope, e.g. one style of a theme. Fill it with lv_xml_style_set_props() and
+ * apply `&xs->style` like any `lv_style_t`.
+ * @param xs        the record (any previous content is ignored)
+ * @param name      name used in log messages (copied)
+ */
+void lv_xml_style_init(lv_xml_style_t * xs, const char * name);
+
+/**
+ * Free everything a record owns and reset its style. The style must no longer
+ * be applied to any widget.
+ * @param xs        a record set up with lv_xml_style_init(), or one from a scope being torn down
+ */
+void lv_xml_style_deinit(lv_xml_style_t * xs);
+
+/**
  * Make an application-owned `lv_style_t` available to XML under `name`, so
  * `styles="name"`, `<style name=...>` references and `bind_style` can use a
  * style built in C. The engine borrows the pointer: it never initialises,
