@@ -19,5 +19,6 @@
 #include "src/xml/lv_xml_update.h"
 #include "src/xml/lv_xml_widget.h"
 #include "src/xml/lv_xml_load.h"
+#include "src/xml/lv_xml_subject_ctx.h"
 
 #endif /* HELIX_XML_H */

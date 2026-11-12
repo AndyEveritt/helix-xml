@@ -193,6 +193,10 @@ typedef struct {
     lv_xml_component_scope_t * parent_scope;  /* stable pointer into a registered scope, or NULL */
     char **         parent_attrs;   /* deep-copied NULL-terminated snapshot, owned (or NULL) */
     void *          bind;           /* <if> only: lv_xml_expr_bind_t* handle; detached in the frag sweep. NULL for <repeat>. */
+    /* The subject context active when the fragment was created (a reference is
+     * held), re-activated for every rebuild so per-instance subjects keep
+     * resolving. NULL when the view was built without one. */
+    struct _lv_xml_subject_ctx_t * subject_ctx;
 } xml_frag_record_t;
 
 typedef struct {

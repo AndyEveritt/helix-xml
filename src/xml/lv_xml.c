@@ -33,6 +33,7 @@
 #include "lv_xml_load_private.h"
 #include "lv_xml_private.h"
 #include "lv_xml_expr.h"
+#include "lv_xml_subject_ctx.h"
 #include "parsers/lv_xml_obj_parser.h"
 #include "parsers/lv_xml_responsive_grid_parser.h"
 #include "parsers/lv_xml_button_parser.h"
@@ -769,6 +770,10 @@ lv_subject_t * lv_xml_find_subject(lv_xml_component_scope_t * scope, const char 
         s = scope_find_subject(scope, name);
         if(s) return s->subject;
     }
+
+    /*Then the instance's subject context chain (see lv_xml_subject_ctx.h)*/
+    lv_subject_t * ctx_subject = lv_xml_subject_ctx_find(lv_xml_subject_ctx_get_active(), name);
+    if(ctx_subject) return ctx_subject;
 
     /*If not found in the component check the global space*/
     if((scope == NULL || scope->name == NULL) || !lv_streq(scope->name, "globals")) {
@@ -1884,8 +1889,10 @@ static void xml_frag_rebuild(xml_frag_record_t * r, uint32_t lo, uint32_t hi, in
     lv_obj_t ** pnode = lv_ll_ins_head(&tmp_state.parent_ll);
     if(pnode) *pnode = r->parent;
 
+    lv_xml_subject_ctx_t * prev_ctx = lv_xml_subject_ctx_activate(r->subject_ctx);
     xml_frag_expand(&tmp_state, (xml_frag_capture_t *)r->capture, lo, hi, count,
                     &r->roots, &r->root_count);
+    lv_xml_subject_ctx_restore(prev_ctx);
 
     /*Free everything the replay allocated on the temp state. The composed-strings
      *list (from `${name}` in the body) is per-state and would leak per rebuild
@@ -1957,6 +1964,10 @@ static xml_frag_record_t * xml_frag_retain(lv_xml_parser_state_t * state, xml_fr
     lv_memzero(r, sizeof(*r));
     r->capture = cap;                 /*ownership moves into the record*/
     r->owner_scope = reg;             /*the frag_ll this node lives in; see the field's comment*/
+    /*A rebuild runs long after this parse, so keep the instance's subject context
+     *alive and re-activate it then; otherwise per-instance subjects would stop
+     *resolving the first time the fragment re-expands.*/
+    r->subject_ctx = lv_xml_subject_ctx_ref(lv_xml_subject_ctx_get_active());
 
     lv_obj_t ** tail = lv_ll_get_tail(&state->parent_ll);
     r->parent = tail ? *tail : state->parent;
@@ -2018,6 +2029,8 @@ static void xml_frag_record_free_heap(xml_frag_record_t * r)
         lv_free(r->parent_attrs);
         r->parent_attrs = NULL;
     }
+    lv_xml_subject_ctx_unref(r->subject_ctx);
+    r->subject_ctx = NULL;
 }
 
 /** LV_EVENT_DELETE on the instance view root: reclaim the record for THIS instance.
