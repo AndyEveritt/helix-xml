@@ -109,6 +109,17 @@ static void test_grid_tracks_can_fit_their_content(void)
     lv_obj_delete(v);
 }
 
+static void test_ext_draw_size_extends_the_drawing_area(void)
+{
+    ASSERT_XML_REGISTERS("wide",
+                         "<component>"
+                         "  <view extends='lv_obj' style_border_width='0' style_shadow_width='0' ext_draw_size='40'/>"
+                         "</component>");
+    lv_obj_t * v = XML_CREATE(lv_screen_active(), "wide", NULL);
+    TEST_ASSERT_EQUAL_INT(40, lv_obj_get_ext_draw_size(v));
+    lv_obj_delete(v);
+}
+
 static void test_a_registered_style_still_extends(void)
 {
     const char * first[] = {"name", "s", "pad_all", "4", NULL, NULL};
@@ -128,6 +139,7 @@ int main(void)
     RUN_TEST(test_a_record_owns_its_transition);
     RUN_TEST(test_inline_radius_accepts_circle);
     RUN_TEST(test_grid_tracks_can_fit_their_content);
+    RUN_TEST(test_ext_draw_size_extends_the_drawing_area);
     RUN_TEST(test_a_registered_style_still_extends);
     return UNITY_END();
 }

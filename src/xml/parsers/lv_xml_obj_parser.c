@@ -110,6 +110,21 @@ typedef enum {
 static void bind_bitfield_cmp(lv_obj_t * obj, lv_subject_t * subject, lv_xml_bind_kind_t kind,
                               uint32_t bits, const char * ref_value, bitfield_cmp_t cmp, bool inv);
 
+/* LVGL has no setter for the extra drawing area around a widget, only an event
+ * that asks for it. `ext_draw_size` answers that event, so a widget can draw
+ * (or let a dragged child draw) outside its own area. */
+static void ext_draw_size_cb(lv_event_t * e)
+{
+    lv_event_set_ext_draw_size(e, (int32_t)(intptr_t)lv_event_get_user_data(e));
+}
+
+static void set_ext_draw_size(lv_obj_t * obj, int32_t size)
+{
+    lv_obj_remove_event_cb(obj, ext_draw_size_cb);
+    lv_obj_add_event_cb(obj, ext_draw_size_cb, LV_EVENT_REFR_EXT_DRAW_SIZE, (void *)(intptr_t)size);
+    lv_obj_refresh_ext_draw_size(obj);
+}
+
 void lv_xml_obj_apply(lv_xml_parser_state_t * state, const char ** attrs)
 {
     void * item = lv_xml_state_get_item(state);
@@ -134,6 +149,7 @@ void lv_xml_obj_apply(lv_xml_parser_state_t * state, const char ** attrs)
         else if(lv_streq("flex_flow", name)) lv_obj_set_flex_flow(item, lv_xml_flex_flow_to_enum(value));
         else if(lv_streq("flex_grow", name)) lv_obj_set_flex_grow(item, lv_xml_atoi(value));
         else if(lv_streq("ext_click_area", name)) lv_obj_set_ext_click_area(item, lv_xml_atoi(value));
+        else if(lv_streq("ext_draw_size", name)) set_ext_draw_size(item, lv_xml_atoi(value));
         else if(lv_streq("scroll_snap_x", name)) lv_obj_set_scroll_snap_x(item, lv_xml_scroll_snap_to_enum(value));
         else if(lv_streq("scroll_snap_y", name)) lv_obj_set_scroll_snap_y(item, lv_xml_scroll_snap_to_enum(value));
         else if(lv_streq("scrollbar_mode", name)) lv_obj_set_scrollbar_mode(item, lv_xml_scrollbar_mode_to_enum(value));
