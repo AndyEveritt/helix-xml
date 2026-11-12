@@ -19,6 +19,10 @@
 /*********************
  *      DEFINES
  *********************/
+#ifndef LV_XML_HAVE_SPAN_STYLE_STATIC
+    /* Set to 1 when building against an LVGL that has lv_spangroup_set_span_style_static() */
+    #define LV_XML_HAVE_SPAN_STYLE_STATIC 0
+#endif
 
 /**********************
  *      TYPEDEFS
@@ -97,7 +101,21 @@ void lv_xml_spangroup_span_apply(lv_xml_parser_state_t * state, const char ** at
         if(lv_streq("text", name)) lv_spangroup_set_span_text(spangroup, span, value);
         else if(lv_streq("style", name)) {
             lv_xml_style_t * style_dsc = lv_xml_get_style_by_name(&state->scope, value);
-            lv_spangroup_set_span_style(spangroup, span, lv_xml_style_get_lv_style(style_dsc));
+            if(style_dsc == NULL) {
+                LV_LOG_WARN("No style \"%s\" for a spangroup span", value);
+            }
+#if LV_XML_HAVE_SPAN_STYLE_STATIC
+            else if(style_dsc->external) {
+                /* An application style is borrowed, like everywhere else: the span keeps
+                 * pointing at it, so rewriting it (a theme switch) restyles the span. Needs
+                 * an LVGL with lv_spangroup_set_span_style_static(); without it the span
+                 * gets a copy, as below. */
+                lv_spangroup_set_span_style_static(spangroup, span, style_dsc->external);
+            }
+#endif
+            else {
+                lv_spangroup_set_span_style(spangroup, span, lv_xml_style_get_lv_style(style_dsc));
+            }
         }
         else if(lv_streq("bind_text", name)) {
             lv_subject_t * subject = lv_xml_get_subject(&state->scope, value);

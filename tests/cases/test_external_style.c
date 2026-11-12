@@ -191,9 +191,36 @@ static void test_rejects_null_arguments(void)
     lv_style_reset(&s);
 }
 
+static void test_span_borrows_the_application_style(void)
+{
+#if !LV_XML_HAVE_SPAN_STYLE_STATIC
+    TEST_IGNORE_MESSAGE("needs an LVGL with lv_spangroup_set_span_style_static()");
+#else
+    static lv_style_t loud;
+    lv_style_init(&loud);
+    lv_style_set_text_color(&loud, lv_color_hex(0x112233));
+    TEST_ASSERT_EQUAL_INT(LV_RESULT_OK, lv_xml_register_style_external(NULL, "loud", &loud));
+
+    ASSERT_XML_REGISTERS("spans",
+                         "<component>"
+                         "  <view extends='lv_spangroup'>"
+                         "    <lv_spangroup-span text='T0:' style='loud'/>"
+                         "  </view>"
+                         "</component>");
+    lv_obj_t * v = XML_CREATE(lv_screen_active(), "spans", NULL);
+    lv_span_t * span = lv_spangroup_get_child(v, 0);
+    TEST_ASSERT_NOT_NULL(span);
+    TEST_ASSERT_EQUAL_PTR(&loud, lv_span_get_style(span)) ;
+
+    lv_obj_delete(v);
+    lv_style_reset(&loud);
+#endif
+}
+
 int main(void)
 {
     UNITY_BEGIN();
+    RUN_TEST(test_span_borrows_the_application_style);
     RUN_TEST(test_style_element_applies_the_application_style);
     RUN_TEST(test_selector_applies_to_the_given_state);
     RUN_TEST(test_bind_style_uses_the_application_style);
