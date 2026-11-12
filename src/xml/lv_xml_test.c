@@ -209,7 +209,7 @@ void lv_xml_test_unregister(void)
     test.steps = NULL;
     test.step_cnt = 0;
 
-    lv_xml_unregister_component(LV_TEST_NAME);
+    lv_xml_component_unregister(LV_TEST_NAME);
 }
 
 void lv_xml_test_run_init(void)
