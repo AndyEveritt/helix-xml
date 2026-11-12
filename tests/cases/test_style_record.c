@@ -89,6 +89,26 @@ static void test_inline_radius_accepts_circle(void)
     lv_obj_delete(v);
 }
 
+static void test_grid_tracks_can_fit_their_content(void)
+{
+    ASSERT_XML_REGISTERS("grid",
+                         "<component>"
+                         "  <view extends='lv_obj' style_layout='grid'"
+                         "        style_grid_column_dsc_array='content fr(9) 40'"
+                         "        style_grid_row_dsc_array='content fr(1)'/>"
+                         "</component>");
+    lv_obj_t * v = XML_CREATE(lv_screen_active(), "grid", NULL);
+    const int32_t * cols = lv_obj_get_style_grid_column_dsc_array(v, LV_PART_MAIN);
+    TEST_ASSERT_NOT_NULL(cols);
+    TEST_ASSERT_EQUAL_INT(LV_GRID_CONTENT, cols[0]);
+    TEST_ASSERT_EQUAL_INT(LV_GRID_FR(9), cols[1]);
+    TEST_ASSERT_EQUAL_INT(40, cols[2]);
+    TEST_ASSERT_EQUAL_INT(LV_GRID_TEMPLATE_LAST, cols[3]);
+    const int32_t * rows = lv_obj_get_style_grid_row_dsc_array(v, LV_PART_MAIN);
+    TEST_ASSERT_EQUAL_INT(LV_GRID_CONTENT, rows[0]);
+    lv_obj_delete(v);
+}
+
 static void test_a_registered_style_still_extends(void)
 {
     const char * first[] = {"name", "s", "pad_all", "4", NULL, NULL};
@@ -107,6 +127,7 @@ int main(void)
     RUN_TEST(test_a_record_takes_style_attributes);
     RUN_TEST(test_a_record_owns_its_transition);
     RUN_TEST(test_inline_radius_accepts_circle);
+    RUN_TEST(test_grid_tracks_can_fit_their_content);
     RUN_TEST(test_a_registered_style_still_extends);
     return UNITY_END();
 }

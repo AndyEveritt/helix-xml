@@ -48,6 +48,13 @@ int32_t lv_xml_to_size(const char * txt);
  */
 int32_t lv_xml_to_radius(const char * txt);
 
+/**
+ * Process one track of a grid column or row descriptor
+ * @param txt       a size in pixels, `fr(N)` for N free units, or `content` to fit the content
+ * @return          the value for the descriptor array
+ */
+int32_t lv_xml_to_grid_track(const char * txt);
+
 
 /**
  * Convert an align string to enum

@@ -438,12 +438,7 @@ lv_result_t lv_xml_style_set_props(lv_xml_style_t * xml_style, lv_xml_component_
             item_cnt = 0;
             const char * sub_value = lv_xml_split_str(&value_buf, ' ');
             while(sub_value) {
-                if(sub_value[0] == 'f' && sub_value[1] == 'r') {
-                    dsc_array[item_cnt] = LV_GRID_FR(lv_xml_atoi(sub_value + 3)); /*+3 to skip "fr("*/
-                }
-                else {
-                    dsc_array[item_cnt] = lv_xml_atoi(sub_value);
-                }
+                dsc_array[item_cnt] = lv_xml_to_grid_track(sub_value);
 
                 item_cnt++;
                 sub_value = lv_xml_split_str(&value_buf, ' ');

@@ -84,6 +84,13 @@ int32_t lv_xml_to_radius(const char * txt)
     return lv_xml_to_size(txt);
 }
 
+int32_t lv_xml_to_grid_track(const char * txt)
+{
+    if(lv_streq(txt, "content")) return LV_GRID_CONTENT;
+    if(txt[0] == 'f' && txt[1] == 'r') return LV_GRID_FR(lv_xml_atoi(txt + 3)); /*+3 to skip "fr("*/
+    return lv_xml_atoi(txt);
+}
+
 lv_align_t lv_xml_align_to_enum(const char * txt)
 {
     if(lv_streq("top_left", txt)) return LV_ALIGN_TOP_LEFT;
