@@ -27,6 +27,7 @@ struct _lv_xml_subject_ctx_t {
     lv_xml_subject_ctx_t * parent;  /**< holds a reference */
     lv_ll_t entries;                /**< subject_entry_t */
     uint32_t ref_cnt;
+    void * user_data;               /**< owned by the application */
 };
 
 /**********************
@@ -137,6 +138,16 @@ lv_subject_t * lv_xml_subject_ctx_find(const lv_xml_subject_ctx_t * ctx, const c
         if(e) return e->subject;
     }
     return NULL;
+}
+
+void lv_xml_subject_ctx_set_user_data(lv_xml_subject_ctx_t * ctx, void * user_data)
+{
+    if(ctx) ctx->user_data = user_data;
+}
+
+void * lv_xml_subject_ctx_get_user_data(const lv_xml_subject_ctx_t * ctx)
+{
+    return ctx ? ctx->user_data : NULL;
 }
 
 lv_xml_subject_ctx_t * lv_xml_subject_ctx_get_parent(const lv_xml_subject_ctx_t * ctx)

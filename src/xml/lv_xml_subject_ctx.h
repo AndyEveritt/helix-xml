@@ -112,6 +112,22 @@ lv_result_t lv_xml_subject_ctx_remove(lv_xml_subject_ctx_t * ctx, const char * n
 lv_subject_t * lv_xml_subject_ctx_find(const lv_xml_subject_ctx_t * ctx, const char * name);
 
 /**
+ * Attach application data to a context, e.g. the host object that owns it.
+ * The engine never reads it. A host whose object dies before the context
+ * (retained fragments can keep a context alive) should reset it to NULL.
+ * @param ctx       the context
+ * @param user_data any pointer, or NULL
+ */
+void lv_xml_subject_ctx_set_user_data(lv_xml_subject_ctx_t * ctx, void * user_data);
+
+/**
+ * Get the data set with `lv_xml_subject_ctx_set_user_data()`.
+ * @param ctx       the context; NULL returns NULL
+ * @return          the user data or NULL
+ */
+void * lv_xml_subject_ctx_get_user_data(const lv_xml_subject_ctx_t * ctx);
+
+/**
  * Get the parent context.
  * @param ctx       the context
  * @return          the parent or NULL

@@ -286,6 +286,26 @@ static void test_add_replaces_and_remove_only_touches_this_context(void)
     lv_subject_deinit(&p.subject);
 }
 
+static void test_user_data_belongs_to_one_context(void)
+{
+    int host;
+    lv_xml_subject_ctx_t * parent = lv_xml_subject_ctx_create(NULL);
+    lv_xml_subject_ctx_t * ctx = lv_xml_subject_ctx_create(parent);
+    TEST_ASSERT_NULL(lv_xml_subject_ctx_get_user_data(ctx));
+
+    lv_xml_subject_ctx_set_user_data(ctx, &host);
+    TEST_ASSERT_EQUAL_PTR(&host, lv_xml_subject_ctx_get_user_data(ctx));
+    TEST_ASSERT_NULL(lv_xml_subject_ctx_get_user_data(parent));
+
+    lv_xml_subject_ctx_set_user_data(ctx, NULL);
+    TEST_ASSERT_NULL(lv_xml_subject_ctx_get_user_data(ctx));
+    TEST_ASSERT_NULL(lv_xml_subject_ctx_get_user_data(NULL));
+    lv_xml_subject_ctx_set_user_data(NULL, &host); /* ignored */
+
+    lv_xml_subject_ctx_delete(ctx);
+    lv_xml_subject_ctx_delete(parent);
+}
+
 static void test_subject_bound_repeat_rebuilds_against_its_creation_context(void)
 {
     /* The count lives in the context, so the <repeat> is retained. Each
@@ -384,6 +404,7 @@ int main(void)
     RUN_TEST(test_nested_components_see_the_instance_context);
     RUN_TEST(test_active_context_is_restored_after_creation);
     RUN_TEST(test_add_replaces_and_remove_only_touches_this_context);
+    RUN_TEST(test_user_data_belongs_to_one_context);
     RUN_TEST(test_subject_bound_repeat_rebuilds_against_its_creation_context);
     RUN_TEST(test_reactive_if_reads_context_subjects);
     return UNITY_END();
