@@ -27,7 +27,6 @@
 /**********************
  *  STATIC PROTOTYPES
  **********************/
-static lv_label_long_mode_t long_mode_text_to_enum_value(const char * txt);
 
 /**********************
  *  STATIC VARIABLES
@@ -65,7 +64,7 @@ void lv_xml_label_apply(lv_xml_parser_state_t * state, const char ** attrs)
         const char * value = attrs[i + 1];
 
         if(lv_streq("text", name)) lv_label_set_text(item, value);
-        else if(lv_streq("long_mode", name)) lv_label_set_long_mode(item, long_mode_text_to_enum_value(value));
+        else if(lv_streq("long_mode", name)) lv_label_set_long_mode(item, lv_xml_label_long_mode_to_enum(value));
 #if LV_USE_TRANSLATION
         else if(lv_streq("translation_tag", name)) {
             /*A component's unset translation_tag prop arrives as ""*/
@@ -97,16 +96,5 @@ void lv_xml_label_apply(lv_xml_parser_state_t * state, const char ** attrs)
  *   STATIC FUNCTIONS
  **********************/
 
-static lv_label_long_mode_t long_mode_text_to_enum_value(const char * txt)
-{
-    if(lv_streq("wrap", txt)) return LV_LABEL_LONG_MODE_WRAP;
-    if(lv_streq("scroll", txt)) return LV_LABEL_LONG_MODE_SCROLL;
-    if(lv_streq("scroll_circular", txt)) return LV_LABEL_LONG_MODE_SCROLL_CIRCULAR;
-    if(lv_streq("dots", txt)) return LV_LABEL_LONG_MODE_DOTS;
-    if(lv_streq("clip", txt)) return LV_LABEL_LONG_MODE_CLIP;
-
-    LV_LOG_WARN("%s is an unknown value for label's long_mode", txt);
-    return 0; /*Return 0 in lack of a better option. */
-}
 
 #endif /* LV_USE_XML */

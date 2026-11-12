@@ -55,6 +55,15 @@ int32_t lv_xml_to_radius(const char * txt);
  */
 int32_t lv_xml_to_grid_track(const char * txt);
 
+#if LV_USE_LABEL
+/**
+ * Process a label long mode
+ * @param txt       wrap, scroll, scroll_circular, dots or clip
+ * @return          the long mode
+ */
+lv_label_long_mode_t lv_xml_label_long_mode_to_enum(const char * txt);
+#endif
+
 
 /**
  * Convert an align string to enum

@@ -91,6 +91,20 @@ int32_t lv_xml_to_grid_track(const char * txt)
     return lv_xml_atoi(txt);
 }
 
+#if LV_USE_LABEL
+lv_label_long_mode_t lv_xml_label_long_mode_to_enum(const char * txt)
+{
+    if(lv_streq("wrap", txt)) return LV_LABEL_LONG_MODE_WRAP;
+    if(lv_streq("scroll", txt)) return LV_LABEL_LONG_MODE_SCROLL;
+    if(lv_streq("scroll_circular", txt)) return LV_LABEL_LONG_MODE_SCROLL_CIRCULAR;
+    if(lv_streq("dots", txt)) return LV_LABEL_LONG_MODE_DOTS;
+    if(lv_streq("clip", txt)) return LV_LABEL_LONG_MODE_CLIP;
+
+    LV_LOG_WARN("%s is an unknown value for label's long_mode", txt);
+    return 0; /*Return 0 in lack of a better option. */
+}
+#endif
+
 lv_align_t lv_xml_align_to_enum(const char * txt)
 {
     if(lv_streq("top_left", txt)) return LV_ALIGN_TOP_LEFT;
