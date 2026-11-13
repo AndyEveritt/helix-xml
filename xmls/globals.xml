@@ -1,9 +1,20 @@
 <!--
 SPDX-License-Identifier: MIT
 SPDX-FileCopyrightText: 2025 LVGL Kft
+SPDX-FileCopyrightText: 2026 356C LLC
 -->
 
 <api>
+    <enumdef name="lv_transition_easing" help="How a transition speeds up and slows down">
+        <enum name="linear" help="Constant speed"/>
+        <enum name="ease_in" help="Start slow"/>
+        <enum name="ease_out" help="End slow"/>
+        <enum name="ease_in_out" help="Start and end slow"/>
+        <enum name="overshoot" help="Go past the end, then come back"/>
+        <enum name="bounce" help="Bounce at the end"/>
+        <enum name="step" help="Jump to the end"/>
+    </enumdef>
+
     <enumdef name="lv_state" help="Widget states">
         <enum name="default" help="Normal state"/>
         <enum name="pressed" help="Being pressed"/>
@@ -250,8 +261,6 @@ SPDX-FileCopyrightText: 2025 LVGL Kft
 
     <styledef>
         <!-- Position and size -->
-        <prop name="x" type="coords" help="Set X position (px, or %)"/>
-        <prop name="y" type="coords" help="Set Y position (px, or %)"/>
         <prop name="height" type="coords" help="Set height (px, %, or content)"/>
         <prop name="min_height" type="coords" help="Set min height (px, %, or content)"/>
         <prop name="max_height" type="coords" help="Set max height (px, %, or content)"/>
@@ -270,6 +279,7 @@ SPDX-FileCopyrightText: 2025 LVGL Kft
         <prop name="pad_all" type="int" help="Set padding in all 4 directions"/>
         <prop name="pad_row" type="int" help="Set padding between rows of layouts"/>
         <prop name="pad_column" type="int" help="Set padding between columns of layouts"/>
+        <prop name="pad_gap" type="int" help="Set both the row and the column padding"/>
         <prop name="pad_radial" type="int" help="Set radial padding"/>
         <prop name="margin_top" type="int" help="Keep distance above the widget when used in a layout"/>
         <prop name="margin_bottom" type="int" help="Keep distance below the widget when used in a layout"/>
@@ -280,7 +290,7 @@ SPDX-FileCopyrightText: 2025 LVGL Kft
         <prop name="margin_all" type="int" help="Set margins in all 4 directions"/>
 
         <!-- Geometry -->
-        <prop name="radius" type="int" help="Set corner radius"/>
+        <prop name="radius" type="int" help="Set corner radius; `circle` for fully round"/>
         <prop name="radial_offset" type="int" help="Set radial offset (e.g. on ticks of circular scales)"/>
         <prop name="align" type="enum:lv_align" help="Set alignment on the parent"/>
         <prop name="clip_corner" type="bool" help="Enable corner clipping"/>
@@ -293,6 +303,9 @@ SPDX-FileCopyrightText: 2025 LVGL Kft
         <prop name="bg_main_stop" type="int" help="Set gradient main stop"/>
         <prop name="bg_grad_stop" type="int" help="Set gradient second stop"/>
         <prop name="bg_grad_color" type="color" help="Set gradient color"/>
+        <prop name="bg_main_opa" type="opa" help="Set gradient main color opacity"/>
+        <prop name="bg_grad_opa" type="opa" help="Set gradient second color opacity"/>
+        <prop name="bg_grad" type="grad" help="Set a gradient defined in `&lt;gradients&gt;`"/>
 
         <!-- Background image -->
         <prop name="bg_image_src" type="image" help="Set background image"/>
@@ -393,10 +406,17 @@ SPDX-FileCopyrightText: 2025 LVGL Kft
         <prop name="rotary_sensitivity" type="int" help="Set rotary sensitivity for Crown input devices"/>
         <prop name="recolor" type="color" help="Mix this color to the widget and all its children"/>
         <prop name="recolor_opa" type="opa" help="The intensity of recoloring"/>
+        <prop name="color_filter_opa" type="opa" help="The intensity of the color filter"/>
         <prop name="blur_radius" type="int" help="The radius of the blurring"/>
         <prop name="blur_quality" type="enum:lv_blur_quality" help="Set whether to prefer speed or precision"/>
         <prop name="blur_backdrop" type="bool" help="true: blur the background first, false: blur the widget"/>
 
+        <!-- Transition, when the style starts or stops applying -->
+        <prop name="transition" type="string" help="`&lt;props&gt; &lt;duration&gt; [easing] [delay]`, e.g. `bg_color|border_color 200ms ease_out`"/>
+        <prop name="transition_props" type="string" help="The properties that animate, `|` or `,` separated"/>
+        <prop name="transition_duration" type="int" help="How long, in ms (`200` or `200ms`)"/>
+        <prop name="transition_easing" type="enum:lv_transition_easing" help="How it speeds up and slows down"/>
+        <prop name="transition_delay" type="int" help="How long before it starts, in ms (`50` or `50ms`)"/>
     </styledef>
 
     </api>

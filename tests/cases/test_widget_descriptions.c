@@ -10,6 +10,8 @@
  *    where the engine runs that check - on the widgets it registers itself, and
  *    on child elements whose apply chain takes part (see lv_xml_attr_check.h)
  *  - every widget and element the engine registers is described
+ *  - every style property globals.xml describes (<styledef>) is one a <style>
+ *    definition accepts
  *
  * What it cannot catch is the reverse of the first: an attribute the engine
  * accepts that no description mentions. The apply chains hold no list of the
@@ -81,6 +83,8 @@ static char g_elements[MAX_ELEMENTS][ELEMENT_MAX_LEN]; /**< every described widg
 static size_t g_element_count;                       /**< entries used in g_elements */
 static described_enum_t g_enums[MAX_ENUMS];          /**< every described enum type */
 static size_t g_enum_count;                          /**< entries used in g_enums */
+static described_attr_t g_style_props[MAX_ATTRS];   /**< every <styledef> property, as element "style" */
+static size_t g_style_prop_count;                   /**< entries used in g_style_props */
 
 /** Where the parser is in one description file */
 typedef struct {
@@ -91,6 +95,7 @@ typedef struct {
     char enumdef[NAME_MAX_LEN]; /**< the <enumdef> being read, "" outside one */
     bool enum_seen;             /**< its first <enum> has been recorded */
     bool is_widget;             /**< it describes a widget; globals.xml only holds shared types */
+    bool in_styledef;           /**< inside globals.xml's <styledef>: the properties of a <style> */
 } reader_t;
 
 /** The value of attribute @p name in expat's @p attrs, or NULL */
@@ -135,7 +140,7 @@ static void XMLCALL on_start(void * user_data, const XML_Char * tag, const XML_C
         snprintf(r->element, sizeof(r->element), "%s-%s", r->widget, name);
         add_element(r->element);
     }
-    else if(strcmp(tag, "prop") == 0 && name) {
+    else if(strcmp(tag, "prop") == 0 && name && !r->in_styledef) {
         /* A <prop> made of <param>s takes the first param's type; the others are `<prop>-<param>` */
         snprintf(r->prop, sizeof(r->prop), "%s", name);
         r->param_index = 0;
@@ -150,6 +155,17 @@ static void XMLCALL on_start(void * user_data, const XML_Char * tag, const XML_C
     }
     else if(strcmp(tag, "arg") == 0 && name) {
         add_attr(r, r->element, name, attr_of(attrs, "type"), true);
+    }
+    else if(strcmp(tag, "styledef") == 0) {
+        r->in_styledef = true;
+    }
+    else if(strcmp(tag, "prop") == 0 && name && r->in_styledef) {
+        TEST_ASSERT_LESS_THAN_size_t_MESSAGE(MAX_ATTRS, g_style_prop_count, "raise MAX_ATTRS");
+        described_attr_t * p = &g_style_props[g_style_prop_count++];
+        snprintf(p->element, sizeof(p->element), "style");
+        snprintf(p->attr, sizeof(p->attr), "%s", name);
+        snprintf(p->type, sizeof(p->type), "%s", attr_of(attrs, "type") ? attr_of(attrs, "type") : "");
+        p->is_arg = false;
     }
     else if(strcmp(tag, "enumdef") == 0 && name) {
         snprintf(r->enumdef, sizeof(r->enumdef), "%s", name);
@@ -170,6 +186,7 @@ static void XMLCALL on_end(void * user_data, const XML_Char * tag)
     reader_t * r = user_data;
     if(strcmp(tag, "element") == 0) snprintf(r->element, sizeof(r->element), "%s", r->widget);
     else if(strcmp(tag, "enumdef") == 0) r->enumdef[0] = '\0';
+    else if(strcmp(tag, "styledef") == 0) r->in_styledef = false;
 }
 
 /** Read description @p file_name, of the widget it is named after ("globals" describes no widget) */
@@ -205,7 +222,7 @@ static void read_description(const char * file_name)
 /** Read every description in xmls/ */
 static void read_descriptions(void)
 {
-    g_attr_count = g_element_count = g_enum_count = 0;
+    g_attr_count = g_element_count = g_enum_count = g_style_prop_count = 0;
     DIR * dir = opendir(HELIX_XML_DESCRIPTION_DIR);
     TEST_ASSERT_NOT_NULL_MESSAGE(dir, HELIX_XML_DESCRIPTION_DIR);
     for(struct dirent * entry = readdir(dir); entry; entry = readdir(dir)) {
@@ -329,10 +346,46 @@ static void test_every_registered_widget_is_described(void)
     TEST_ASSERT_EQUAL_STRING_MESSAGE("", missing, "registered widgets with no description in xmls/");
 }
 
+/** Every style property described is one a <style> definition accepts */
+static void test_every_described_style_property_is_accepted(void)
+{
+    read_descriptions();
+    TEST_ASSERT_GREATER_THAN_size_t_MESSAGE(0, g_style_prop_count, "globals.xml describes no style properties");
+
+    static char failures[REPORT_LEN];
+    failures[0] = '\0';
+    for(size_t i = 0; i < g_style_prop_count; i++) {
+        const described_attr_t * p = &g_style_props[i];
+        /* A transition's other parts are optional, but it needs to know what animates */
+        const char * also = strncmp(p->attr, "transition_", 11) == 0 && strcmp(p->attr, "transition_props") != 0
+                            ? " transition_props=\"bg_color\"" : "";
+        const char * value = strcmp(p->attr, "transition") == 0 ? "bg_color 100" : sample_value(p->type);
+
+        char xml[1024];
+        snprintf(xml, sizeof(xml),
+                 "<component><styles><style name=\"t\" %s=\"%s\"%s/></styles><view extends=\"lv_obj\"/></component>",
+                 p->attr, value, also);
+        char component[32];
+        snprintf(component, sizeof(component), "style_%u", (unsigned)i);
+        log_capture_start();
+        ASSERT_XML_REGISTERS(component, xml);
+        log_capture_stop();
+        lv_xml_component_unregister(component);
+
+        if(log_contains("style property is not supported")) {
+            const size_t used = strlen(failures);
+            snprintf(failures + used, sizeof(failures) - used, "\n  %s", p->attr);
+        }
+    }
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("", failures,
+                                     "described style properties a <style> doesn't accept: fix globals.xml or the parser");
+}
+
 int main(void)
 {
     UNITY_BEGIN();
     RUN_TEST(test_every_described_attribute_is_recognised);
     RUN_TEST(test_every_registered_widget_is_described);
+    RUN_TEST(test_every_described_style_property_is_accepted);
     return UNITY_END();
 }
