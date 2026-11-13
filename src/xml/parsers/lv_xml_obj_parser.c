@@ -235,10 +235,8 @@ void lv_xml_obj_apply(lv_xml_parser_state_t * state, const char ** attrs)
                                                                             lv_xml_to_bool(value));
         else if(lv_streq("overflow_visible", name))     lv_obj_set_flag(item, LV_OBJ_FLAG_OVERFLOW_VISIBLE,
                                                                             lv_xml_to_bool(value));
-#ifdef LV_OBJ_FLAG_RADIO_BUTTON
-        else if(lv_streq("radio_button", name))     lv_obj_set_flag(item, LV_OBJ_FLAG_RADIO_BUTTON,
-                                                                        lv_xml_to_bool(value));
-#endif
+        /* LVGL 9.6 keeps radio_button out of lv_obj_flag_t, with a setter of its own */
+        else if(lv_streq("radio_button", name))         lv_obj_set_radio_button(item, lv_xml_to_bool(value));
         else if(lv_streq("flex_in_new_track", name))    lv_obj_set_flag(item, LV_OBJ_FLAG_FLEX_IN_NEW_TRACK,
                                                                             lv_xml_to_bool(value));
 
@@ -1527,9 +1525,7 @@ static lv_obj_flag_t flag_to_enum(const char * txt)
     if(lv_streq("floating", txt)) return LV_OBJ_FLAG_FLOATING;
     if(lv_streq("send_draw_task_events", txt)) return LV_OBJ_FLAG_SEND_DRAW_TASK_EVENTS;
     if(lv_streq("overflow_visible", txt)) return LV_OBJ_FLAG_OVERFLOW_VISIBLE;
-#ifdef LV_OBJ_FLAG_RADIO_BUTTON
-    if(lv_streq("radio_button", txt)) return LV_OBJ_FLAG_RADIO_BUTTON;
-#endif
+    /* No radio_button: LVGL 9.6 gives it no lv_obj_flag_t bit, so it can't be bound */
     if(lv_streq("flex_in_new_track", txt)) return LV_OBJ_FLAG_FLEX_IN_NEW_TRACK;
     if(lv_streq("layout_1", txt)) return LV_OBJ_FLAG_LAYOUT_1;
     if(lv_streq("layout_2", txt)) return LV_OBJ_FLAG_LAYOUT_2;

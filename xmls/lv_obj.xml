@@ -461,6 +461,7 @@ Example
         <prop name="floating"            type="flag:flag lv_obj_flag" help="Do not scroll the object when the parent scrolls and ignore layout"/>
         <prop name="send_draw_task_events" type="flag:flag lv_obj_flag" help="Send `LV_EVENT_DRAW_TASK_ADDED` events"/>
         <prop name="overflow_visible"    type="flag:flag lv_obj_flag" help="Do not clip the children to the parent's ext draw size"/>
+        <prop name="radio_button"        type="bool" help="Allow only one radio_button sibling to be checked (can't be bound: LVGL 9.6 gives it no flag bit)"/>
 
         <prop name="flex_in_new_track"   type="flag:flag lv_obj_flag" help="Start a new flex track on this item"/>
 

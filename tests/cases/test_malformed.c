@@ -704,7 +704,7 @@ static const char * WIDE_GOOD_XML =
     "    <lv_slider name=\"sld\" value=\"40\" value-animated=\"true\" min_value=\"0\""
     "               max_value=\"100\" width=\"120\" clickable=\"true\"/>"
     "    <lv_bar name=\"bar\" bind_value=\"lvl\" style_bg_opa=\"128\" flex_grow=\"1\"/>"
-    "    <lv_button name=\"btn\" width=\"60\" height=\"30\" checked=\"true\""
+    "    <lv_button name=\"btn\" width=\"60\" height=\"30\" checked=\"true\" radio_button=\"true\""
     "               style_bg_opa-checked=\"200\" style_bg_color-indicator-pressed=\"0xff0000\">"
     "      <bind_flag_if_eq subject=\"on\" flag=\"hidden\" ref_value=\"0\"/>"
     "    </lv_button>"
@@ -740,6 +740,8 @@ static void test_a_correct_document_produces_no_unknown_attribute_warning(void)
                                   "the slider's value attribute was not applied");
     TEST_ASSERT_TRUE_MESSAGE(lv_obj_has_state(ASSERT_NAMED(root, "btn"), LV_STATE_CHECKED),
                              "the button's checked attribute was not applied");
+    TEST_ASSERT_TRUE_MESSAGE(lv_obj_is_radio_button(ASSERT_NAMED(root, "btn")),
+                             "the button's radio_button attribute was not applied");
 
     assert_engine_still_works("correct wide-spread document");
 }
@@ -850,6 +852,37 @@ static void test_unknown_enum_value_warns_and_the_widget_is_still_built(void)
     ASSERT_LABEL_TEXT(ASSERT_NAMED(root, "a"), "Kept");
 
     assert_engine_still_works("unknown enum value");
+}
+
+/**
+ * Child elements, and tags, that can't be built from what they were given.
+ * Each used to crash: a section dereferenced the style it didn't find, an axis
+ * compared a missing `axis` against its names, and `<globals>` - a scope, but
+ * no component - was parsed for a view it doesn't have.
+ */
+static void test_elements_missing_what_they_need_warn_and_stay_usable(void)
+{
+    static const malformed_case_t table[] = {
+        {
+            "<lv_chart-axis> without axis=",
+            "<component><view extends=\"lv_obj\">"
+            "<lv_chart><lv_chart-axis min_value=\"0\" max_value=\"10\"/></lv_chart></view></component>",
+            true, "<lv_chart-axis> needs axis="
+        },
+        {
+            "<lv_scale-section> naming a style that doesn't exist",
+            "<component><view extends=\"lv_obj\">"
+            "<lv_scale><lv_scale-section min_value=\"0\" max_value=\"10\" style_main=\"no_such_style\"/>"
+            "</lv_scale></view></component>",
+            true, "No style found with no_such_style name"
+        },
+        {
+            "<globals> written as a tag",
+            "<component><view extends=\"lv_obj\"><globals/></view></component>",
+            true, "'globals' has no <view> to create"
+        },
+    };
+    RUN_TABLE(table);
 }
 
 /*---------------------------------------------------------------------------
@@ -1525,6 +1558,7 @@ int main(void)
     RUN_TEST(test_a_correct_document_produces_no_unknown_attribute_warning);
     RUN_TEST(test_an_application_registered_widget_is_never_reported);
     RUN_TEST(test_unknown_enum_value_warns_and_the_widget_is_still_built);
+    RUN_TEST(test_elements_missing_what_they_need_warn_and_stay_usable);
     RUN_TEST(test_contentless_documents_warn_and_leave_the_parser_usable);
     RUN_TEST(test_component_without_a_view_warns_and_leaves_the_parser_usable);
     RUN_TEST(test_invalid_utf8_and_control_bytes_warn_and_leave_the_parser_usable);

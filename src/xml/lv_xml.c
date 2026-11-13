@@ -344,6 +344,12 @@ void * lv_xml_create_in_scope(lv_obj_t * parent, lv_xml_component_scope_t * pare
                               lv_xml_component_scope_t * scope,
                               const char ** attrs)
 {
+    /* A scope with nothing to build, such as `globals` written as a tag */
+    if(scope->view_def == NULL) {
+        LV_LOG_WARN("'%s' has no <view> to create", scope->name ? scope->name : "");
+        return NULL;
+    }
+
     /* Initialize the parser state */
     lv_xml_parser_state_t state;
     lv_xml_parser_state_init(&state);

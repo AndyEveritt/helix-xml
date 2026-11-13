@@ -175,7 +175,14 @@ void lv_xml_chart_axis_apply(lv_xml_parser_state_t * state, const char ** attrs)
     LV_UNUSED(attrs);
 
     lv_obj_t * chart = lv_xml_state_get_parent(state);
-    lv_chart_axis_t axis = chart_axis_to_enum(lv_xml_get_value_of(attrs, "axis"));
+    const char * axis_str = lv_xml_get_value_of(attrs, "axis");
+    if(axis_str == NULL) {
+        /* Returning before lv_xml_attr_check_enter() leaves no chain to blame the
+         * other attributes on, so this is the only warning. */
+        LV_LOG_WARN("<lv_chart-axis> needs axis=; it is ignored");
+        return;
+    }
+    lv_chart_axis_t axis = chart_axis_to_enum(axis_str);
 
     lv_xml_attr_check_enter(state);
     /* Selects which axis the chain's min_value/max_value apply to; read above,

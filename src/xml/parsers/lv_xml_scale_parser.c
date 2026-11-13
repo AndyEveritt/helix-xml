@@ -28,6 +28,7 @@
  *  STATIC PROTOTYPES
  **********************/
 static lv_scale_mode_t scale_mode_to_enum(const char * txt);
+static lv_style_t * section_style(lv_xml_parser_state_t * state, const char * name);
 
 /**********************
  *  STATIC VARIABLES
@@ -103,16 +104,16 @@ void lv_xml_scale_section_apply(lv_xml_parser_state_t * state, const char ** att
         if(lv_streq("min_value", name)) lv_scale_set_section_min_value(scale, section, lv_xml_atoi(value));
         else if(lv_streq("max_value", name)) lv_scale_set_section_max_value(scale, section, lv_xml_atoi(value));
         else if(lv_streq("style_main", name)) {
-            lv_xml_style_t * style_dsc = lv_xml_get_style_by_name(&state->scope, value);
-            lv_scale_set_section_style_main(scale, section, lv_xml_style_get_lv_style(style_dsc));
+            lv_style_t * style = section_style(state, value);
+            if(style) lv_scale_set_section_style_main(scale, section, style);
         }
         else if(lv_streq("style_indicator", name)) {
-            lv_xml_style_t * style_dsc = lv_xml_get_style_by_name(&state->scope, value);
-            lv_scale_set_section_style_indicator(scale, section, lv_xml_style_get_lv_style(style_dsc));
+            lv_style_t * style = section_style(state, value);
+            if(style) lv_scale_set_section_style_indicator(scale, section, style);
         }
         else if(lv_streq("style_items", name)) {
-            lv_xml_style_t * style_dsc = lv_xml_get_style_by_name(&state->scope, value);
-            lv_scale_set_section_style_items(scale, section, lv_xml_style_get_lv_style(style_dsc));
+            lv_style_t * style = section_style(state, value);
+            if(style) lv_scale_set_section_style_items(scale, section, style);
         }
         else if(lv_streq("bind_min_value", name)) {
             lv_subject_t * subject = lv_xml_get_subject(&state->scope, value);
@@ -151,6 +152,13 @@ static lv_scale_mode_t scale_mode_to_enum(const char * txt)
 
     LV_LOG_WARN("%s is an unknown value for scale's mode", txt);
     return 0; /*Return 0 in lack of a better option. */
+}
+
+/** The style called @p name for a section, or NULL (the lookup has warned) when there is none */
+static lv_style_t * section_style(lv_xml_parser_state_t * state, const char * name)
+{
+    lv_xml_style_t * style_dsc = lv_xml_get_style_by_name(&state->scope, name);
+    return style_dsc ? lv_xml_style_get_lv_style(style_dsc) : NULL;
 }
 
 
