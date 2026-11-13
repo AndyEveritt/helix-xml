@@ -123,7 +123,8 @@ Pinned by `test_bind_compose.c`, which drives every pair in both notify orders.
 
 Available to every `cond=` and to `<subject_expr>`.
 
-Operands are subject names and integer literals. Operators, loosest first:
+Operands are subject names and integer literals. A name starts with a letter or `_` and may then hold
+letters, digits, `_` and `.`, so dotted subject names such as `job.progress` work as they are. Operators, loosest first:
 
 | Precedence | Operators | Word forms |
 |---|---|---|

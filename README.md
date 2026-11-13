@@ -201,7 +201,7 @@ ctest --test-dir build --output-on-failure
 
 That is the whole setup. CMake fetches LVGL **v9.6.0** with `FetchContent` (the tag is
 `HELIX_LVGL_TAG` in `tests/CMakeLists.txt`), compiles helix-xml against it as a static
-library, and builds one executable per file in `tests/cases/`: **402 tests across 21
+library, and builds one executable per file in `tests/cases/`: **571 tests across 28
 executables**, a couple of seconds end to end.
 
 `tests/lv_conf.h` is the pinned configuration for the test build, derived from LVGL 9.5.0's

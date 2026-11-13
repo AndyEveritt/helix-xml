@@ -14,7 +14,9 @@
 typedef struct { lv_xml_expr_tok_kind_t kind; const char * start; size_t len; int32_t ival; } tok_t;
 
 static bool is_ident_start(char c){ return (c>='a'&&c<='z')||(c>='A'&&c<='Z')||c=='_'; }
-static bool is_ident_char(char c){ return is_ident_start(c)||(c>='0'&&c<='9'); }
+/* After the first character a name may also hold digits and dots: applications name subjects by area, e.g.
+   "job.progress". The language has no member access and only integer literals, so a dot is never anything else. */
+static bool is_ident_char(char c){ return is_ident_start(c)||(c>='0'&&c<='9')||c=='.'; }
 
 /* Fold a word operator to its symbolic kind, else IDENT. */
 static lv_xml_expr_tok_kind_t word_kind(const char * s, size_t n){

@@ -179,6 +179,20 @@ static void test_tokenize_recognises_literals_identifiers_and_parens(void)
     assert_tokens("_my_subject_2", ident, 2);
 }
 
+/** Names may hold dots after the first character, as dotted subject names do; a dot can't start one. */
+static void test_tokenize_reads_dotted_names_as_one_identifier(void)
+{
+    static const lv_xml_expr_tok_kind_t dotted[] = {
+        LV_XML_EXPR_TOK_IDENT, LV_XML_EXPR_TOK_LT, LV_XML_EXPR_TOK_IDENT, LV_XML_EXPR_TOK_EOF,
+    };
+    assert_tokens("widget.width lt job.progress_2", dotted, 4);
+
+    static const lv_xml_expr_tok_kind_t leading[] = {
+        LV_XML_EXPR_TOK_ERROR, LV_XML_EXPR_TOK_IDENT, LV_XML_EXPR_TOK_EOF,
+    };
+    assert_tokens(".width", leading, 3);
+}
+
 static void test_tokenize_skips_all_four_whitespace_characters(void)
 {
     static const lv_xml_expr_tok_kind_t want[] = {
@@ -320,6 +334,19 @@ static void test_compile_resolves_identifiers_through_the_resolver(void)
 
     lv_xml_expr_t * e = must_compile("a + b");
     TEST_ASSERT_EQUAL_size_t(2, lv_xml_expr_subject_count(e));
+    lv_xml_expr_free(e);
+}
+
+/** A dotted name reaches the resolver whole, and its subject is read. */
+static void test_compile_resolves_dotted_names_whole(void)
+{
+    subjects_reset();
+    snprintf(g_sub_names[5], sizeof(g_sub_names[5]), "w.size");
+    lv_subject_set_int(&g_subs[5], 7);
+
+    lv_xml_expr_t * e = must_compile("w.size * 2");
+    TEST_ASSERT_EQUAL_STRING("w.size", g_last_resolved);
+    TEST_ASSERT_EQUAL_INT32(14, lv_xml_expr_eval(e));
     lv_xml_expr_free(e);
 }
 
@@ -1399,6 +1426,7 @@ int main(void)
     /* tokenizer */
     RUN_TEST(test_tokenize_emits_eof_even_for_an_empty_source);
     RUN_TEST(test_tokenize_recognises_literals_identifiers_and_parens);
+    RUN_TEST(test_tokenize_reads_dotted_names_as_one_identifier);
     RUN_TEST(test_tokenize_skips_all_four_whitespace_characters);
     RUN_TEST(test_tokenize_recognises_every_symbolic_operator);
     RUN_TEST(test_tokenize_folds_word_operators_to_symbol_kinds);
@@ -1410,6 +1438,7 @@ int main(void)
     /* compile */
     RUN_TEST(test_compile_accepts_subject_free_expressions_without_a_resolver);
     RUN_TEST(test_compile_resolves_identifiers_through_the_resolver);
+    RUN_TEST(test_compile_resolves_dotted_names_whole);
     RUN_TEST(test_compile_rejects_null_and_empty_source_without_warning);
     RUN_TEST(test_compile_rejects_more_than_128_tokens);
     RUN_TEST(test_compile_rejects_any_bad_token);
