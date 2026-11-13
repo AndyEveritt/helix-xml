@@ -826,6 +826,11 @@ void lv_obj_xml_bind_style_prop_apply(lv_xml_parser_state_t * state, const char 
         return;
     }
     lv_style_prop_t prop = lv_xml_style_prop_to_enum(prop_str);
+    if(prop == LV_STYLE_PROP_INV) {
+        /* lv_style_set_prop() asserts on an unknown property, which would end the program */
+        LV_LOG_WARN("`%s` is not a style property, in lv_obj bind_style_prop", prop_str);
+        return;
+    }
 
     const char * subject_str = lv_xml_get_value_of(attrs, "subject");
 
