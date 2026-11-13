@@ -19,6 +19,10 @@
  * Contexts chain, so an item inside a list inside a screen can see the item's
  * subjects, then the screen's, then globals.
  *
+ * A context can also have a resolver, which creates subjects on demand,
+ * and the application can set one global resolver, asked last of all, 
+ * after the globals (`lv_xml_set_subject_resolver()`).
+ *
  * Bindings resolve their subject once, at creation, so a context only has to
  * be active while a view is being built. Subject-bound `<repeat>` and `<if>`
  * rebuild later, asynchronously; they retain a reference to the context that
@@ -52,6 +56,23 @@ extern "C" {
  **********************/
 
 typedef struct _lv_xml_subject_ctx_t lv_xml_subject_ctx_t;
+
+/**
+ * Supplies a subject for a name nobody added: a host whose subjects aren't a
+ * fixed set (e.g. one per field of a data tree) creates them as views ask.
+ * @param origin    the context the lookup started in, which may be a child of
+ *                  the context the resolver belongs to (NULL for a lookup made
+ *                  with no active context). A name can depend on the scope it
+ *                  is written in, e.g. a row index, and `origin` is that scope.
+ * @param name      the name looked up
+ * @param user_data the pointer given when the resolver was set
+ * @return          the subject, or NULL to let the lookup carry on. A subject
+ *                  returned must outlive every widget bound to it, as an added
+ *                  one must; the resolver is asked again on every lookup, so
+ *                  it should return the same subject for the same name.
+ */
+typedef lv_subject_t * (*lv_xml_subject_resolver_cb_t)(const lv_xml_subject_ctx_t * origin, const char * name,
+                                                       void * user_data);
 
 /**********************
  * GLOBAL PROTOTYPES
@@ -104,7 +125,18 @@ lv_result_t lv_xml_subject_ctx_add(lv_xml_subject_ctx_t * ctx, const char * name
 lv_result_t lv_xml_subject_ctx_remove(lv_xml_subject_ctx_t * ctx, const char * name);
 
 /**
- * Look a subject up in `ctx` and then in its parents.
+ * Give a context a resolver (see `lv_xml_subject_resolver_cb_t`). A lookup
+ * that reaches this context asks it after the context's own subjects and
+ * before the parent. One resolver per context; setting another replaces it.
+ * @param ctx       the context
+ * @param cb        the resolver, or NULL to remove it
+ * @param user_data passed to `cb`
+ */
+void lv_xml_subject_ctx_set_resolver(lv_xml_subject_ctx_t * ctx, lv_xml_subject_resolver_cb_t cb, void * user_data);
+
+/**
+ * Look a subject up in `ctx` and then in its parents. At each context, its own
+ * subjects come first, then its resolver.
  * @param ctx       start of the chain; NULL returns NULL
  * @param name      subject name
  * @return          the subject or NULL. Never logs.

@@ -74,8 +74,8 @@ void tearDown(void)
 static lv_subject_t g_subs[EXPR_SUBJECT_POOL];
 static char g_sub_names[EXPR_SUBJECT_POOL][8];
 
-/** Last name the resolver was asked for - used to observe identifier truncation. */
-static char g_last_resolved[128];
+/** Last name the resolver was asked for - used to observe what a long or path-like name resolves as. */
+static char g_last_resolved[256];
 
 static void subjects_reset(void)
 {
@@ -462,40 +462,69 @@ static void test_compile_rejects_syntax_errors(void)
 }
 
 /**
- * Identifiers are copied into a char[64], so anything longer is truncated to 63
- * characters BEFORE the resolver is called - two subject names sharing a
- * 63-character prefix resolve to the same subject. The truncation itself is a
- * buffer limit and stays; what must not happen is it being SILENT.
+ * Names are not truncated: a truncated name could resolve to a different subject. Up to 191 characters reach the
+ * resolver whole; a longer one fails the compile, with a warning, before the resolver is asked.
  */
-static void test_compile_warns_when_it_truncates_a_long_identifier(void)
+static void test_compile_rejects_a_name_longer_than_the_limit(void)
 {
-    char long_name[71];
-    memset(long_name, 'a', 70);
-    long_name[70] = '\0';
+    char long_name[193];
+    memset(long_name, 'a', 192);
+    long_name[192] = '\0';
 
+    g_last_resolved[0] = '\0';
     log_capture_start();
     TEST_ASSERT_NULL(lv_xml_expr_compile(long_name, null_resolver, NULL));
     log_capture_stop();
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("", g_last_resolved, "a name over the limit must not reach the resolver");
+    TEST_ASSERT_TRUE_MESSAGE(log_contains("name longer than 191 characters"), "the rejection must warn");
 
-    TEST_ASSERT_EQUAL_size_t_MESSAGE(63, strlen(g_last_resolved),
-                                     "the resolver is handed only the first 63 characters");
-    TEST_ASSERT_EQUAL_MEMORY_MESSAGE(long_name, g_last_resolved, 63,
-                                     "the truncated prefix must be the head of the identifier");
-    TEST_ASSERT_TRUE_MESSAGE(log_contains("truncated to 'aaaaaaaa"),
-                             "truncation must warn and show what the resolver actually got");
-
-    /* Exactly 63 characters fits, so nothing is truncated and nothing warns. */
-    char exact_name[64];
-    memset(exact_name, 'b', 63);
-    exact_name[63] = '\0';
+    /* Exactly 191 characters fits, and the resolver gets all of it. */
+    char exact_name[192];
+    memset(exact_name, 'b', 191);
+    exact_name[191] = '\0';
 
     log_capture_start();
     TEST_ASSERT_NULL(lv_xml_expr_compile(exact_name, null_resolver, NULL));
     log_capture_stop();
+    TEST_ASSERT_EQUAL_size_t(191, strlen(g_last_resolved));
+    TEST_ASSERT_FALSE_MESSAGE(log_contains("name longer"), "a name that fits exactly must not warn");
+}
 
-    TEST_ASSERT_EQUAL_size_t(63, strlen(g_last_resolved));
-    TEST_ASSERT_FALSE_MESSAGE(log_contains("truncated"),
-                              "an identifier that fits exactly must not warn");
+/**
+ * A name may be a path into application data (lv_xml_set_subject_resolver()): brackets and braces with whatever is
+ * inside them, a single '|' before a word, and ':' before an argument all stay part of the name. "||" is still `or`,
+ * and a lone '|' or an unbalanced bracket is still an error.
+ */
+static void test_tokenize_a_path_is_one_name(void)
+{
+    const lv_xml_expr_tok_kind_t path_gt[] = {LV_XML_EXPR_TOK_IDENT, LV_XML_EXPR_TOK_GT, LV_XML_EXPR_TOK_INT,
+                                               LV_XML_EXPR_TOK_EOF};
+    assert_tokens("om.heat.heaters[{value}].current|fixed:1 gt 5", path_gt, 4);
+
+    const lv_xml_expr_tok_kind_t one[] = {LV_XML_EXPR_TOK_IDENT, LV_XML_EXPR_TOK_EOF};
+    assert_tokens("x[1 + 2]", one, 2);
+    assert_tokens("v|eq:-1", one, 2);
+    assert_tokens("a|b", one, 2);
+
+    const lv_xml_expr_tok_kind_t or_[] = {LV_XML_EXPR_TOK_IDENT, LV_XML_EXPR_TOK_OR, LV_XML_EXPR_TOK_IDENT,
+                                          LV_XML_EXPR_TOK_EOF};
+    assert_tokens("a||b", or_, 4);
+
+    const lv_xml_expr_tok_kind_t lone_bar[] = {LV_XML_EXPR_TOK_IDENT, LV_XML_EXPR_TOK_ERROR, LV_XML_EXPR_TOK_IDENT,
+                                               LV_XML_EXPR_TOK_EOF};
+    assert_tokens("a | b", lone_bar, 4);
+
+    const lv_xml_expr_tok_kind_t unbalanced[] = {LV_XML_EXPR_TOK_IDENT, LV_XML_EXPR_TOK_ERROR, LV_XML_EXPR_TOK_INT,
+                                                 LV_XML_EXPR_TOK_EOF};
+    assert_tokens("x[1", unbalanced, 4);
+}
+
+/** The resolver is handed the whole path, as written */
+static void test_compile_hands_the_resolver_the_whole_path(void)
+{
+    g_last_resolved[0] = '\0';
+    TEST_ASSERT_NULL(lv_xml_expr_compile("om.tools[{om.state.currentTool}].heaters|count gt 0", null_resolver, NULL));
+    TEST_ASSERT_EQUAL_STRING("om.tools[{om.state.currentTool}].heaters|count", g_last_resolved);
 }
 
 /*===========================================================================
@@ -1444,7 +1473,9 @@ int main(void)
     RUN_TEST(test_compile_rejects_any_bad_token);
     RUN_TEST(test_compile_rejects_unresolved_identifiers);
     RUN_TEST(test_compile_rejects_syntax_errors);
-    RUN_TEST(test_compile_warns_when_it_truncates_a_long_identifier);
+    RUN_TEST(test_compile_rejects_a_name_longer_than_the_limit);
+    RUN_TEST(test_tokenize_a_path_is_one_name);
+    RUN_TEST(test_compile_hands_the_resolver_the_whole_path);
 
     /* eval */
     RUN_TEST(test_eval_computes_arithmetic);

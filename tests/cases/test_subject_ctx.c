@@ -17,6 +17,9 @@
  *  - a subject-bound `<repeat>` / `<if>` rebuilds against the context it was
  *    created in, even after the creator dropped its reference (the fragment
  *    record holds its own)
+ *  - a context's resolver is asked after its own subjects and before its
+ *    parent, with the context the lookup started in; the global resolver is
+ *    asked after the globals, with the active context
  *
  * NO ASSERTION HERE DEPENDS ON MEASURED GEOMETRY.
  *
@@ -24,6 +27,7 @@
  */
 
 #include <lvgl.h>
+#include <string.h>
 
 #include "helpers/helix_test_env.h"
 #include "helpers/helix_test_pump.h"
@@ -394,6 +398,131 @@ static void test_reactive_if_reads_context_subjects(void)
     lv_subject_deinit(&on);
 }
 
+/*---------------------------------------------------------------------------
+ * Resolvers
+ *--------------------------------------------------------------------------*/
+
+/* What the test resolvers were last asked, and what they answer */
+static const lv_xml_subject_ctx_t * g_resolver_origin;
+static char g_resolver_name[64];
+static str_subject_t g_resolved;
+static lv_subject_t g_resolved_int;
+
+/* Answers "row.on|int" with g_resolved_int and other names starting with "row." with g_resolved, and notes the
+ * question */
+static lv_subject_t * row_resolver(const lv_xml_subject_ctx_t * origin, const char * name, void * user_data)
+{
+    LV_UNUSED(user_data);
+    g_resolver_origin = origin;
+    lv_strlcpy(g_resolver_name, name, sizeof(g_resolver_name));
+    if(strcmp(name, "row.on|int") == 0) return &g_resolved_int;
+    return strncmp(name, "row.", 4) == 0 ? &g_resolved.subject : NULL;
+}
+
+static void test_a_context_resolver_is_asked_after_its_subjects_and_before_its_parent(void)
+{
+    static str_subject_t own, parents;
+    str_init(&g_resolved, "resolved");
+    str_init(&own, "own");
+    str_init(&parents, "parent's");
+
+    lv_xml_subject_ctx_t * parent = lv_xml_subject_ctx_create(NULL);
+    lv_xml_subject_ctx_add(parent, "row.parent", &parents.subject);
+    lv_xml_subject_ctx_t * ctx = lv_xml_subject_ctx_create(parent);
+    lv_xml_subject_ctx_add(ctx, "row.own", &own.subject);
+    lv_xml_subject_ctx_set_resolver(ctx, row_resolver, NULL);
+
+    /* Its own subject wins over the resolver */
+    TEST_ASSERT_EQUAL_PTR(&own.subject, lv_xml_subject_ctx_find(ctx, "row.own"));
+    /* The resolver wins over the parent */
+    TEST_ASSERT_EQUAL_PTR(&g_resolved.subject, lv_xml_subject_ctx_find(ctx, "row.parent"));
+    /* A name the resolver declines carries on to the parent */
+    TEST_ASSERT_NULL(lv_xml_subject_ctx_find(ctx, "other"));
+    TEST_ASSERT_EQUAL_STRING("other", g_resolver_name);
+
+    /* Asked through a child, the resolver is told where the lookup started */
+    lv_xml_subject_ctx_t * child = lv_xml_subject_ctx_create(ctx);
+    TEST_ASSERT_EQUAL_PTR(&g_resolved.subject, lv_xml_subject_ctx_find(child, "row.x"));
+    TEST_ASSERT_EQUAL_PTR(child, g_resolver_origin);
+
+    /* Removing it leaves only the subjects */
+    lv_xml_subject_ctx_set_resolver(ctx, NULL, NULL);
+    TEST_ASSERT_EQUAL_PTR(&parents.subject, lv_xml_subject_ctx_find(ctx, "row.parent"));
+
+    lv_xml_subject_ctx_delete(child);
+    lv_xml_subject_ctx_delete(ctx);
+    lv_xml_subject_ctx_delete(parent);
+    lv_subject_deinit(&own.subject);
+    lv_subject_deinit(&parents.subject);
+    lv_subject_deinit(&g_resolved.subject);
+}
+
+static void test_a_widget_binds_to_a_resolved_subject(void)
+{
+    ASSERT_XML_REGISTERS("resolved_card",
+                         "<component>"
+                         "  <view extends='lv_obj'>"
+                         "    <lv_label name='lbl' bind_text='row.items[{index}].name|upper'/>"
+                         "  </view>"
+                         "</component>");
+    str_init(&g_resolved, "Hot end");
+
+    lv_xml_subject_ctx_t * ctx = lv_xml_subject_ctx_create(NULL);
+    lv_xml_subject_ctx_set_resolver(ctx, row_resolver, NULL);
+    lv_obj_t * v = lv_xml_create_with_ctx(lv_screen_active(), "resolved_card", NULL, ctx);
+    TEST_ASSERT_NOT_NULL(v);
+    TEST_ASSERT_EQUAL_STRING("row.items[{index}].name|upper", g_resolver_name);
+    ASSERT_LABEL_TEXT(ASSERT_NAMED(v, "lbl"), "Hot end");
+
+    lv_subject_copy_string(&g_resolved.subject, "Bed");
+    ASSERT_LABEL_TEXT(ASSERT_NAMED(v, "lbl"), "Bed");
+
+    lv_obj_delete(v);
+    lv_xml_subject_ctx_delete(ctx);
+    lv_subject_deinit(&g_resolved.subject);
+}
+
+static void test_the_global_resolver_is_asked_after_the_globals(void)
+{
+    ASSERT_XML_REGISTERS("global_resolved",
+                         "<component>"
+                         "  <view extends='lv_obj'>"
+                         "    <lv_label name='global_lbl' bind_text='row.global'/>"
+                         "    <lv_label name='resolved_lbl' bind_text='row.other'/>"
+                         "    <lv_obj name='cond_obj'>"
+                         "      <bind_flag_if cond='row.on|int gt 0' flag='hidden'/>"
+                         "    </lv_obj>"
+                         "  </view>"
+                         "</component>");
+    static str_subject_t global;
+    str_init(&global, "global");
+    str_init(&g_resolved, "resolved");
+    lv_subject_init_int(&g_resolved_int, 1);
+    lv_xml_register_subject(NULL, "row.global", &global.subject);
+
+    lv_xml_subject_ctx_t * ctx = lv_xml_subject_ctx_create(NULL);
+    lv_xml_set_subject_resolver(row_resolver, NULL);
+
+    lv_obj_t * v = lv_xml_create_with_ctx(lv_screen_active(), "global_resolved", NULL, ctx);
+    TEST_ASSERT_NOT_NULL(v);
+    ASSERT_LABEL_TEXT(ASSERT_NAMED(v, "global_lbl"), "global");
+    ASSERT_LABEL_TEXT(ASSERT_NAMED(v, "resolved_lbl"), "resolved");
+    /* A cond= expression resolves a path-like name through it too */
+    TEST_ASSERT_EQUAL_STRING("row.on|int", g_resolver_name);
+    TEST_ASSERT_EQUAL_PTR(ctx, g_resolver_origin);
+    TEST_ASSERT_TRUE(lv_obj_has_flag(ASSERT_NAMED(v, "cond_obj"), LV_OBJ_FLAG_HIDDEN));
+    lv_subject_set_int(&g_resolved_int, 0);
+    TEST_ASSERT_FALSE(lv_obj_has_flag(ASSERT_NAMED(v, "cond_obj"), LV_OBJ_FLAG_HIDDEN));
+
+    lv_xml_set_subject_resolver(NULL, NULL);
+    lv_obj_delete(v);
+    lv_xml_subject_ctx_delete(ctx);
+    lv_xml_unregister_subject(NULL, "row.global");
+    lv_subject_deinit(&global.subject);
+    lv_subject_deinit(&g_resolved.subject);
+    lv_subject_deinit(&g_resolved_int);
+}
+
 int main(void)
 {
     UNITY_BEGIN();
@@ -407,5 +536,8 @@ int main(void)
     RUN_TEST(test_user_data_belongs_to_one_context);
     RUN_TEST(test_subject_bound_repeat_rebuilds_against_its_creation_context);
     RUN_TEST(test_reactive_if_reads_context_subjects);
+    RUN_TEST(test_a_context_resolver_is_asked_after_its_subjects_and_before_its_parent);
+    RUN_TEST(test_a_widget_binds_to_a_resolved_subject);
+    RUN_TEST(test_the_global_resolver_is_asked_after_the_globals);
     return UNITY_END();
 }

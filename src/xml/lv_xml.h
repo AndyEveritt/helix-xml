@@ -25,6 +25,7 @@ extern "C" {
 #include "lv_xml_component.h"
 #include "lv_xml_widget.h"
 #include "lv_xml_load.h"
+#include "lv_xml_subject_ctx.h"
 
 /*********************
  *      DEFINES
@@ -144,7 +145,8 @@ lv_result_t lv_xml_unregister_subject(lv_xml_component_scope_t * scope, const ch
  * Get a subject by name.
  * @param scope     If specified start searching in that component's subject list,
  *                  then in the active subject context chain (see
- *                  lv_xml_subject_ctx.h), and if not found search in the global space.
+ *                  lv_xml_subject_ctx.h), and if not found search in the global space,
+ *                  then ask the global resolver (`lv_xml_set_subject_resolver()`).
  *                  If `NULL` search the active context chain, then the global space.
  * @param name      Name of the subject to find.
  * @return          Pointer to the subject or NULL if not found.
@@ -164,6 +166,16 @@ lv_subject_t * lv_xml_get_subject(lv_xml_component_scope_t * scope, const char *
  * @return          Pointer to the subject or NULL if not found.
  */
 lv_subject_t * lv_xml_find_subject(lv_xml_component_scope_t * scope, const char * name);
+
+/**
+ * Set the global subject resolver, asked when a name is in no component scope,
+ * no subject context and not among the globals: an application can create
+ * subjects on demand for names it recognises (see `lv_xml_subject_resolver_cb_t`
+ * in lv_xml_subject_ctx.h). Its `origin` is the active subject context.
+ * @param cb        the resolver, or NULL to remove it
+ * @param user_data passed to `cb`
+ */
+void lv_xml_set_subject_resolver(lv_xml_subject_resolver_cb_t cb, void * user_data);
 
 lv_result_t lv_xml_register_const(lv_xml_component_scope_t * scope, const char * name, const char * value);
 

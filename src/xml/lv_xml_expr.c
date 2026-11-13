@@ -11,12 +11,42 @@
 #include <string.h>
 #include <stdbool.h>
 
+/* Longest name an expression may use */
+#define LV_XML_EXPR_MAX_NAME_LEN 191
+
 typedef struct { lv_xml_expr_tok_kind_t kind; const char * start; size_t len; int32_t ival; } tok_t;
 
 static bool is_ident_start(char c){ return (c>='a'&&c<='z')||(c>='A'&&c<='Z')||c=='_'; }
 /* After the first character a name may also hold digits and dots: applications name subjects by area, e.g.
    "job.progress". The language has no member access and only integer literals, so a dot is never anything else. */
 static bool is_ident_char(char c){ return is_ident_start(c)||(c>='0'&&c<='9')||c=='.'; }
+
+/* The end of a name starting at `s`. Besides is_ident_char() characters, a name may hold what an application's
+   resolver (lv_xml_set_subject_resolver()) reads as a path into its data, e.g. "om.heat.heaters[{value}].current|fixed:1":
+     - brackets and braces, kept whole with everything inside them, so "[a + 1]" is one name, not an addition
+     - a single '|' followed by a letter or '_' ("||" is still `or`)
+     - ':' followed by a name character, or by '-' and a digit (an argument, e.g. "eq:fault" or "scale:-1")
+   None of these is an operator of the language, so a name can't swallow one. */
+static const char * ident_end(const char * s){
+    while(*s){
+        if(is_ident_char(*s)){ s++; continue; }
+        if(*s=='['||*s=='{'){
+            int depth=0;
+            const char * p=s;
+            for(; *p; p++){
+                if(*p=='['||*p=='{') depth++;
+                else if(*p==']'||*p=='}'){ if(--depth==0){ p++; break; } }
+            }
+            if(depth!=0) return s; /* unbalanced: stop before it, and the bracket becomes an error token */
+            s=p;
+            continue;
+        }
+        if(*s=='|' && is_ident_start(s[1])){ s++; continue; }
+        if(*s==':' && (is_ident_char(s[1]) || (s[1]=='-' && s[2]>='0' && s[2]<='9'))){ s+=(s[1]=='-')?2:1; continue; }
+        break;
+    }
+    return s;
+}
 
 /* Fold a word operator to its symbolic kind, else IDENT. */
 static lv_xml_expr_tok_kind_t word_kind(const char * s, size_t n){
@@ -38,7 +68,7 @@ static size_t tokenize(const char * s, tok_t * out, size_t cap){
         if(*s==' '||*s=='\t'||*s=='\n'||*s=='\r'){ s++; continue; }
         char c=*s;
         if(c>='0'&&c<='9'){ int32_t v=0; const char*st=s; while(*s>='0'&&*s<='9'){v=v*10+(*s-'0');s++;} PUSH(LV_XML_EXPR_TOK_INT,st,(size_t)(s-st),v); continue; }
-        if(is_ident_start(c)){ const char*st=s; while(is_ident_char(*s))s++; size_t ln=(size_t)(s-st); PUSH(word_kind(st,ln),st,ln,0); continue; }
+        if(is_ident_start(c)){ const char*st=s; s=ident_end(s); size_t ln=(size_t)(s-st); PUSH(word_kind(st,ln),st,ln,0); continue; }
         switch(c){
             case '(': PUSH(LV_XML_EXPR_TOK_LPAREN,s,1,0); s++; break;
             case ')': PUSH(LV_XML_EXPR_TOK_RPAREN,s,1,0); s++; break;
@@ -119,10 +149,14 @@ static expr_node_t * parse_primary(parser_t * p){
     if(t->kind==LV_XML_EXPR_TOK_INT){ advance(p); expr_node_t*n=node_new(N_INT); n->ival=t->ival; return n; }
     if(t->kind==LV_XML_EXPR_TOK_IDENT){
         advance(p);
-        char name[64]; size_t ln=t->len<63?t->len:63; memcpy(name,t->start,ln); name[ln]='\0';
-        /* Truncation happens BEFORE the resolver sees the name, so two subjects
-         * sharing a 63-char prefix would silently resolve to the same one. */
-        if(t->len>ln) LV_LOG_WARN("expr: identifier longer than 63 characters, truncated to '%s'", name);
+        /* Names may be paths into application data (see ident_end()), so allow long ones; a longer one is an
+         * error rather than truncated, since a truncated name could resolve to a different subject. */
+        char name[LV_XML_EXPR_MAX_NAME_LEN + 1];
+        if(t->len>LV_XML_EXPR_MAX_NAME_LEN){
+            LV_LOG_WARN("expr: name longer than %d characters: '%.*s'", LV_XML_EXPR_MAX_NAME_LEN, (int)t->len, t->start);
+            p->error=true; return NULL;
+        }
+        memcpy(name,t->start,t->len); name[t->len]='\0';
         lv_subject_t * s = p->resolver ? p->resolver(p->ctx,name) : NULL;
         if(!s){ LV_LOG_WARN("expr: unknown subject '%s'", name); p->error=true; return NULL; }
         collect_subject(p,s);

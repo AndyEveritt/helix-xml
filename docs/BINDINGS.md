@@ -35,6 +35,22 @@ Subjects declared in a component live in **that component's scope**. A subject
 the host application registers before any component loads is global and visible
 everywhere. Covered by `test_subject_decl.c`, `test_subject_provenance.c`.
 
+### Subjects created on demand
+
+An application whose subjects aren't a fixed set, e.g. one per field of a data
+tree, can create them when a view first asks for a name, with a resolver
+(`lv_xml_subject_resolver_cb_t`):
+
+- `lv_xml_subject_ctx_set_resolver(ctx, cb, data)` gives one subject context a
+  resolver. A lookup reaching that context asks it after the context's own
+  subjects and before the parent, and tells it which context the lookup started
+  in, so a name can depend on where it is written (e.g. a list row).
+- `lv_xml_set_subject_resolver(cb, data)` sets the global resolver, asked last of
+  all, after the globals.
+
+A resolver returns NULL for a name it doesn't know, and the lookup carries on.
+Covered by `test_subject_ctx.c`.
+
 ### String subjects need a caller-owned buffer
 
 A string subject does not allocate. Whatever the host passes at registration is
@@ -124,7 +140,11 @@ Pinned by `test_bind_compose.c`, which drives every pair in both notify orders.
 Available to every `cond=` and to `<subject_expr>`.
 
 Operands are subject names and integer literals. A name starts with a letter or `_` and may then hold
-letters, digits, `_` and `.`, so dotted subject names such as `job.progress` work as they are. Operators, loosest first:
+letters, digits, `_` and `.`, so dotted subject names such as `job.progress` work as they are. So that a name can
+also be a path a resolver understands (see [Subjects created on demand](#subjects-created-on-demand)), it may hold
+brackets and braces with anything inside them, a single `|` before a word and `:` before an argument:
+`om.heat.heaters[{value}].current|fixed:1 gt 5` compares one name with 5. `||` is still `or`. Names are up to 191
+characters; a longer one fails the expression. Operators, loosest first:
 
 | Precedence | Operators | Word forms |
 |---|---|---|

@@ -28,6 +28,8 @@ struct _lv_xml_subject_ctx_t {
     lv_ll_t entries;                /**< subject_entry_t */
     uint32_t ref_cnt;
     void * user_data;               /**< owned by the application */
+    lv_xml_subject_resolver_cb_t resolver; /**< creates subjects on demand, or NULL */
+    void * resolver_data;           /**< passed to `resolver` */
 };
 
 /**********************
@@ -130,12 +132,24 @@ lv_result_t lv_xml_subject_ctx_remove(lv_xml_subject_ctx_t * ctx, const char * n
     return LV_RESULT_OK;
 }
 
+void lv_xml_subject_ctx_set_resolver(lv_xml_subject_ctx_t * ctx, lv_xml_subject_resolver_cb_t cb, void * user_data)
+{
+    if(ctx == NULL) return;
+    ctx->resolver = cb;
+    ctx->resolver_data = user_data;
+}
+
 lv_subject_t * lv_xml_subject_ctx_find(const lv_xml_subject_ctx_t * ctx, const char * name)
 {
     if(name == NULL) return NULL;
+    const lv_xml_subject_ctx_t * origin = ctx;
     for(; ctx; ctx = ctx->parent) {
         subject_entry_t * e = find_local(ctx, name);
         if(e) return e->subject;
+        if(ctx->resolver) {
+            lv_subject_t * resolved = ctx->resolver(origin, name, ctx->resolver_data);
+            if(resolved) return resolved;
+        }
     }
     return NULL;
 }

@@ -116,6 +116,10 @@ static void free_timelines_event_cb(lv_event_t * e);
 /**********************
  *  STATIC VARIABLES
  **********************/
+/* The application's global resolver (lv_xml_set_subject_resolver()); single
+ * threaded, like the rest of the engine's state. */
+static lv_xml_subject_resolver_cb_t global_resolver;
+static void * global_resolver_data;
 
 static lv_xml_translation_key_cb_t translation_key_cb;
 
@@ -338,6 +342,9 @@ void lv_xml_deinit(void)
 
     lv_free((void *)xml_path_prefix);
     xml_path_prefix = NULL;
+
+    global_resolver = NULL;
+    global_resolver_data = NULL;
 }
 
 void * lv_xml_create_in_scope(lv_obj_t * parent, lv_xml_component_scope_t * parent_scope,
@@ -769,6 +776,12 @@ lv_result_t lv_xml_register_subject_owned(lv_xml_component_scope_t * scope, cons
     return register_subject_impl(scope, name, subject, true);
 }
 
+void lv_xml_set_subject_resolver(lv_xml_subject_resolver_cb_t cb, void * user_data)
+{
+    global_resolver = cb;
+    global_resolver_data = user_data;
+}
+
 lv_subject_t * lv_xml_find_subject(lv_xml_component_scope_t * scope, const char * name)
 {
     lv_xml_subject_t * s;
@@ -789,6 +802,9 @@ lv_subject_t * lv_xml_find_subject(lv_xml_component_scope_t * scope, const char 
             if(s) return s->subject;
         }
     }
+
+    /*Last, the application may create it (see lv_xml_set_subject_resolver())*/
+    if(global_resolver && name) return global_resolver(lv_xml_subject_ctx_get_active(), name, global_resolver_data);
 
     return NULL;
 }
