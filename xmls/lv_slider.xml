@@ -1,0 +1,41 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2025 LVGL Kft
+SPDX-FileCopyrightText: 2026 356C LLC
+
+Example
+<lv_slider mode="range" value="30"/>
+ -->
+
+<widget>
+    <api>
+        <enumdef name="lv_slider_mode" help="How the slider behaves">
+            <enum name="normal" help="One knob, grows left to right"/>
+            <enum name="range" help="Two knobs, select a range"/>
+            <enum name="symmetrical" help="Indicator grows from zero"/>
+        </enumdef>
+
+        <enumdef name="lv_slider_orientation" help="How the slider is oriented">
+            <enum name="auto" help="Choose orientation automatically based on widget size"/>
+            <enum name="horizontal" help="Slide left to right"/>
+            <enum name="vertical" help="Slide bottom to top"/>
+        </enumdef>
+
+        <prop name="min_value" type="int" help="Set minimum value"/>
+        <prop name="max_value" type="int" help="Set maximum value"/>
+
+        <prop name="value" help="Set current value">
+            <param name="value" type="int" help="Current value"/>
+            <param name="animated" type="bool" default="false" help="Animate update (reference as `value-animated`)"/>
+        </prop>
+
+        <prop name="start_value" help="Set start value in range mode">
+            <param name="start_value" type="int" help="Start value"/>
+            <param name="animated" type="bool" default="false" help="Animate update (reference as `start_value-animated`)"/>
+        </prop>
+
+        <prop name="mode" type="enum:lv_slider_mode" help="Set slider mode"/>
+        <prop name="orientation" type="enum:lv_slider_orientation" help="Set slider orientation"/>
+        <prop name="bind_value" type="subject" help="Bind value to subject"/>
+    </api>
+</widget>

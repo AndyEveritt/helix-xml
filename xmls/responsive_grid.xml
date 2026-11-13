@@ -1,0 +1,19 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2026 356C LLC
+
+Example
+<responsive_grid min_col_width="200" max_cols="3" style_pad_column="8" style_pad_row="8">
+    <lv_obj/>
+    <lv_obj/>
+</responsive_grid>
+-->
+
+<widget>
+    <api>
+        <prop name="min_col_width" type="int" help="The narrowest a column may get, in px (default: one column)"/>
+        <prop name="max_col_width" type="int" help="The widest a column may get, in px; the rest of the row is left empty (default: no cap)"/>
+        <prop name="max_cols" type="int" help="The most columns (default: no cap)"/>
+        <prop name="fit_items" type="bool" help="true: no more columns than visible children"/>
+    </api>
+</widget>

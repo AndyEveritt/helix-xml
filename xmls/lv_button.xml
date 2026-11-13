@@ -1,0 +1,14 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2025 LVGL Kft
+
+Example:
+<lv_button>
+	<lv_label text="hello"/>
+</lv_button>
+-->
+
+<widget>
+	<api>
+	</api>
+</widget>

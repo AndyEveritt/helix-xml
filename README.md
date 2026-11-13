@@ -124,6 +124,13 @@ condition that needs one is a single expression:
 <bind_flag_if cond="can_save and dirty" flag="hidden" invert="true"/>
 ```
 
+## Widget descriptions
+
+`xmls/` describes what XML can contain. The engine does not read them. `tests/cases/test_widget_descriptions.c` keeps them true: every
+described attribute must be one the engine recognises, and every registered widget and element
+must be described. The test cannot see an attribute the engine accepts that no file mentions, so
+**when adding an attribute to a parser, describe it here too.**
+
 ## Building it into a project
 
 helix-xml is source you compile alongside LVGL — there is no build system here, deliberately.

@@ -1,0 +1,15 @@
+<!--
+SPDX-License-Identifier: MIT
+SPDX-FileCopyrightText: 2025 LVGL Kft
+SPDX-FileCopyrightText: 2026 356C LLC
+
+Example
+<lv_checkbox text="Option 1"/>
+-->
+
+<widget>
+    <api>
+        <prop name="text" type="string" help="The label text shown next to the checkbox"/>
+        <prop name="translation_tag" type="string" help="Translation tag for the text; follows language changes"/>
+    </api>
+</widget>

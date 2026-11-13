@@ -243,6 +243,7 @@ foreach(case_file ${HELIX_TEST_CASES})
     target_compile_options(${case_name} PRIVATE -Wall -Wextra)
     target_compile_definitions(${case_name} PRIVATE
         HELIX_TEST_ASSET_DIR="${HELIX_TEST_DIR}/assets"
+        HELIX_XML_DESCRIPTION_DIR="${HELIX_XML_ROOT}/xmls"
     )
     add_test(NAME ${case_name} COMMAND ${case_name})
     # Tests must not depend on the shell's cwd; anything on disk is reached
