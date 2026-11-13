@@ -257,7 +257,7 @@ static const char * sample_value(const char * type)
     }
     if(strcmp(type, "bool") == 0 || strncmp(type, "flag:", 5) == 0) return "false";
     if(strcmp(type, "int") == 0 || strcmp(type, "coords") == 0 || strcmp(type, "opa") == 0 ||
-       strcmp(type, "deg") == 0) {
+       strcmp(type, "deg") == 0 || strcmp(type, "radius") == 0) {
         return "10"; /* Not 0: some sizes and counts can't be 0, e.g. a QR code's */
     }
     if(strcmp(type, "color") == 0) return "0x000000";

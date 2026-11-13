@@ -290,7 +290,7 @@ SPDX-FileCopyrightText: 2026 356C LLC
         <prop name="margin_all" type="int" help="Set margins in all 4 directions"/>
 
         <!-- Geometry -->
-        <prop name="radius" type="int" help="Set corner radius; `circle` for fully round"/>
+        <prop name="radius" type="radius" help="Set corner radius; `circle` for fully round"/>
         <prop name="radial_offset" type="int" help="Set radial offset (e.g. on ticks of circular scales)"/>
         <prop name="align" type="enum:lv_align" help="Set alignment on the parent"/>
         <prop name="clip_corner" type="bool" help="Enable corner clipping"/>

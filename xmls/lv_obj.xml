@@ -317,7 +317,7 @@ Example
         <prop name="style_margin_ver-selector" type="int" help="Set both top and bottom margin"/>
         <prop name="style_margin_all-selector" type="int" help="Set margins in all 4 directions"/>
 
-        <prop name="style_radius-selector" type="int" help="Set corner radius; `circle` for fully round"/>
+        <prop name="style_radius-selector" type="radius" help="Set corner radius; `circle` for fully round"/>
         <prop name="style_radial_offset-selector" type="int" help="Set radial offset (e.g. on ticks of circular scales)"/>
         <prop name="style_align-selector" type="enum:lv_align" help="Set alignment on the parent"/>
         <prop name="style_clip_corner-selector" type="bool" help="Enable corner clipping"/>
