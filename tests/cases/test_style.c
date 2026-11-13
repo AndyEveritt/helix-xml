@@ -1252,6 +1252,49 @@ static void test_an_empty_subject_style_binding_installs_nothing(void)
     ASSERT_STYLE_INT(ASSERT_NAMED(root, "via_eq"), LV_STYLE_RADIUS, LV_PART_MAIN, 9);
 }
 
+/*
+ * A string subject compares as text. Read as an int it is 0, and so is any word
+ * given as ref_value, so every comparison used to match and every style apply.
+ */
+static lv_subject_t s_state_subject;
+static char s_state_buf[16];
+static char s_state_prev[16];
+
+static const char * STYLE_STRING_SUBJECT_XML =
+    "<component>"
+    "  <styles>"
+    "    <style name=\"is_fault\" radius=\"7\"/>"
+    "    <style name=\"not_fault\" border_width=\"3\"/>"
+    "  </styles>"
+    "  <view extends=\"lv_obj\" name=\"string_subject_root\">"
+    "    <lv_obj name=\"target\">"
+    "      <bind_style_if_eq name=\"is_fault\" subject=\"heater_state\" ref_value=\"fault\"/>"
+    "      <bind_style_if_not_eq name=\"not_fault\" subject=\"heater_state\" ref_value=\"fault\"/>"
+    "    </lv_obj>"
+    "  </view>"
+    "</component>";
+
+static void test_a_string_subject_style_binding_compares_text(void)
+{
+    lv_subject_init_string(&s_state_subject, s_state_buf, s_state_prev, sizeof(s_state_buf), "active");
+    TEST_ASSERT_EQUAL_INT(LV_RESULT_OK, (int)lv_xml_register_subject(NULL, "heater_state", &s_state_subject));
+    ASSERT_XML_REGISTERS("style_string_subject", STYLE_STRING_SUBJECT_XML);
+
+    lv_obj_t * root = XML_CREATE(helix_test_env_screen(), "style_string_subject", NULL);
+    lv_obj_t * target = ASSERT_NAMED(root, "target");
+    TEST_ASSERT_NOT_EQUAL_INT_MESSAGE(7, lv_obj_get_style_radius(target, LV_PART_MAIN),
+                                      "\"active\" isn't \"fault\", so is_fault must not apply");
+    ASSERT_STYLE_INT(target, LV_STYLE_BORDER_WIDTH, LV_PART_MAIN, 3);
+
+    lv_subject_copy_string(&s_state_subject, "fault");
+    ASSERT_STYLE_INT(target, LV_STYLE_RADIUS, LV_PART_MAIN, 7);
+    TEST_ASSERT_NOT_EQUAL_INT_MESSAGE(3, lv_obj_get_style_border_width(target, LV_PART_MAIN),
+                                      "not_fault must stop applying");
+
+    lv_obj_delete(root);
+    lv_subject_deinit(&s_state_subject);
+}
+
 /*===========================================================================
  * Gradients
  *==========================================================================*/
@@ -2227,6 +2270,7 @@ int main(void)
     RUN_TEST(test_inline_style_attribute_outranks_a_bound_style);
 
     RUN_TEST(test_an_empty_subject_style_binding_installs_nothing);
+    RUN_TEST(test_a_string_subject_style_binding_compares_text);
 
     RUN_TEST(test_gradient_declared_in_a_component_scope_is_resolvable_by_name);
     RUN_TEST(test_gradient_reference_reaches_the_widget_from_a_style_and_from_an_attribute);

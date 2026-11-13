@@ -688,13 +688,22 @@ typedef struct {
     lv_style_selector_t selector;
     int32_t value;
     bind_style_cmp_t cmp;
+    /* A string subject compares as text with this (stored after the struct, in
+     * the same allocation, so it is freed with it); NULL for an int subject */
+    const char * ref_string;
 } bind_style_cmp_data_t;
 
 static void bind_style_cmp_observer_cb(lv_observer_t * observer, lv_subject_t * subject)
 {
     bind_style_cmp_data_t * p = observer->user_data;
-    int32_t v = lv_subject_get_int(subject);
     bool match = false;
+    if(p->ref_string) {
+        const bool equal = lv_streq(lv_subject_get_string(subject), p->ref_string);
+        match = p->cmp == BIND_STYLE_CMP_EQ ? equal : !equal;
+        lv_obj_style_set_disabled(observer->target, p->style, p->selector, !match);
+        return;
+    }
+    int32_t v = lv_subject_get_int(subject);
     switch(p->cmp) {
         case BIND_STYLE_CMP_EQ:     match = (v == p->value); break;
         case BIND_STYLE_CMP_NOT_EQ: match = (v != p->value); break;
@@ -769,7 +778,15 @@ void lv_obj_xml_bind_style_cmp_apply(lv_xml_parser_state_t * state, const char *
         return;
     }
 
-    int32_t ref_value = lv_xml_atoi(ref_value_str);
+    /* A string subject compares as text, so only equality makes sense. Read as an
+     * int it would be 0, as would any word for ref_value, and always match. */
+    const bool is_string = subject->type == LV_SUBJECT_TYPE_STRING;
+    if(is_string && cmp != BIND_STYLE_CMP_EQ && cmp != BIND_STYLE_CMP_NOT_EQ) {
+        LV_LOG_WARN("A string subject can only be compared with `_eq` or `_not_eq`");
+        return;
+    }
+    int32_t ref_value = is_string ? 0 : lv_xml_atoi(ref_value_str);
+    const size_t ref_string_size = is_string ? lv_strlen(ref_value_str) + 1 : 0;
 
     const char * selector_str = lv_xml_get_value_of(attrs, "selector");
     lv_style_selector_t selector = lv_xml_style_selector_text_to_enum(selector_str);
@@ -790,7 +807,7 @@ void lv_obj_xml_bind_style_cmp_apply(lv_xml_parser_state_t * state, const char *
         /* Add the style (starts enabled, observer will immediately set correct state) */
         lv_obj_add_style(item, lv_xml_style_get_lv_style(xml_style), sel);
 
-        bind_style_cmp_data_t * p = lv_malloc(sizeof(bind_style_cmp_data_t));
+        bind_style_cmp_data_t * p = lv_malloc(sizeof(bind_style_cmp_data_t) + ref_string_size);
         LV_ASSERT_MALLOC(p);
         if(p == NULL) return;
 
@@ -798,6 +815,12 @@ void lv_obj_xml_bind_style_cmp_apply(lv_xml_parser_state_t * state, const char *
         p->selector = sel;
         p->value = ref_value;
         p->cmp = cmp;
+        p->ref_string = NULL;
+        if(is_string) {
+            char * text = (char *)(p + 1);
+            lv_memcpy(text, ref_value_str, ref_string_size);
+            p->ref_string = text;
+        }
 
         /* A subject that refuses observers (not initialized, or deinitialized) leaves
          * nothing to toggle the style, so it is not left applied either. */
