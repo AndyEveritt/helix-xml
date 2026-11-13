@@ -78,6 +78,15 @@ void lv_xml_widget_mark_all_builtin(void)
     }
 }
 
+void lv_xml_widget_foreach(lv_xml_widget_iter_cb_t cb, void * user_data)
+{
+    if(cb == NULL) return;
+
+    for(const lv_widget_processor_t * p = widget_processor_head; p; p = p->next) {
+        cb(p, user_data);
+    }
+}
+
 void lv_xml_widget_deinit(void)
 {
     /* Every node and every node->name came from the heap in

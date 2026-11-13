@@ -42,6 +42,13 @@ typedef struct _lv_widget_processor_t {
     struct _lv_widget_processor_t * next;
 } lv_widget_processor_t;
 
+/**
+ * Callback for `lv_xml_widget_foreach`, invoked once per registered Widget.
+ * @param processor  the Widget's descriptor; `builtin` tells lv_xml_init()'s own from the application's
+ * @param user_data  the opaque pointer passed to `lv_xml_widget_foreach`
+ */
+typedef void (*lv_xml_widget_iter_cb_t)(const lv_widget_processor_t * processor, void * user_data);
+
 /**********************
  * GLOBAL PROTOTYPES
  **********************/
@@ -77,6 +84,18 @@ void lv_xml_widget_mark_all_builtin(void);
  * starts from a clean registry.
  */
 void lv_xml_widget_deinit(void);
+
+/**
+ * Iterate every registered Widget, invoking `cb` with each descriptor.
+ * Companion enumeration primitive to `lv_xml_widget_get_processor` (which only
+ * looks up by name), e.g. for tools that list what XML can contain. Order is
+ * most-recently-registered first. A Widget's child elements are registered as
+ * Widgets too, named `<widget>-<child>` (e.g. "lv_obj-style", written `<style>`
+ * inside any widget, or "lv_spangroup-span").
+ * @param cb          callback invoked per Widget (no-op if NULL)
+ * @param user_data   opaque pointer forwarded to every `cb` invocation
+ */
+void lv_xml_widget_foreach(lv_xml_widget_iter_cb_t cb, void * user_data);
 
 /**
  * Get a descriptor that was created when the Widget was registered.
