@@ -508,8 +508,7 @@ void * lv_xml_create(lv_obj_t * parent, const char * name, const char ** attrs)
              * its styles, constants, etc are stored.
              * So leave state.scope = NULL which means the global context.*/
 
-            p = lv_xml_widget_get_extended_widget_processor(scope->extends);
-            p->apply_cb(&state, attrs);
+            lv_xml_component_apply_instance_attrs(&state, scope, attrs);
 #if LV_USE_OBJ_NAME
             /*The instance site wins over a name the component set on its own
              *<view> root - the instance is the more specific statement, and

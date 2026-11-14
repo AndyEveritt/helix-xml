@@ -240,6 +240,28 @@ void lv_xml_component_deinit(void);
 void lv_xml_component_scope_init(lv_xml_component_scope_t * scope);
 
 /**
+ * Apply the attributes given where component `scope` is used to the instance's
+ * root (`state->item`), as `<my_button x="20" title="Hi"/>` sets `x`.
+ *
+ * An attribute naming a prop the component declares in <api> is its public
+ * interface, consumed by $param substitution inside the view, so it is left
+ * out: letting it through as well would give it a second meaning whenever the
+ * name collides with one of the root widget's own attributes (`disabled="<subject>"`
+ * names a subject to the component but reads as a boolean to the widget,
+ * leaving the instance permanently disabled whatever the subject says).
+ * Every other attribute passes through unchanged.
+ *
+ * Used by every way an instance is made: a nested component tag
+ * (lv_xml_component_process()) and lv_xml_create() alike.
+ *
+ * @param state  parser state whose `item` is the instance's root
+ * @param scope  the component's scope
+ * @param attrs  the attributes given where it is used; may be NULL
+ */
+void lv_xml_component_apply_instance_attrs(lv_xml_parser_state_t * state, lv_xml_component_scope_t * scope,
+                                           const char ** attrs);
+
+/**
  * Count one live instance of `scope` and tie its lifetime to `view_root`.
  *
  * Widgets built from a component hold RAW `lv_style_t *` pointers into their

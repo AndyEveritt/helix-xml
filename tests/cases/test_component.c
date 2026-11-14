@@ -238,6 +238,30 @@ static void test_each_prop_type_falls_back_to_its_declared_default(void)
     ASSERT_BG_COLOR(box, 0xFF0000);
 }
 
+/**
+ * A prop given to lv_xml_create() is the component's, as at a nested tag: it
+ * must not also reach the root widget when its name is one of the widget's own
+ * attributes (here `hidden`), while any other attribute (`x`) still does.
+ */
+static void test_a_prop_given_at_create_time_does_not_reach_the_root_widget(void)
+{
+    ASSERT_XML_REGISTERS("prop_named_hidden",
+                         "<component>"
+                         "  <api><prop name=\"hidden\" type=\"string\" default=\"\"/></api>"
+                         "  <view extends=\"lv_obj\">"
+                         "    <lv_label name=\"echo\" text=\"$hidden\"/>"
+                         "  </view>"
+                         "</component>");
+
+    const char * attrs[] = {"hidden", "true", "x", "17", NULL, NULL};
+    lv_obj_t * inst = XML_CREATE(helix_test_env_screen(), "prop_named_hidden", attrs);
+    helix_test_pump(30);
+
+    ASSERT_NO_FLAG(inst, LV_OBJ_FLAG_HIDDEN);
+    ASSERT_LABEL_TEXT(ASSERT_NAMED(inst, "echo"), "true");
+    TEST_ASSERT_EQUAL_INT32(17, lv_obj_get_x_aligned(inst));
+}
+
 /** A value passed to lv_xml_create() beats the `default` for every type. */
 static void test_a_prop_passed_at_create_time_overrides_its_default(void)
 {
@@ -1480,6 +1504,7 @@ int main(void)
 
     RUN_TEST(test_each_prop_type_falls_back_to_its_declared_default);
     RUN_TEST(test_a_prop_passed_at_create_time_overrides_its_default);
+    RUN_TEST(test_a_prop_given_at_create_time_does_not_reach_the_root_widget);
     RUN_TEST(test_a_subject_typed_prop_produces_a_live_binding);
     RUN_TEST(test_a_prop_referenced_but_never_declared_warns_and_drops_the_attribute);
     RUN_TEST(test_a_value_supplied_for_an_undeclared_prop_warns_and_does_not_crash);
